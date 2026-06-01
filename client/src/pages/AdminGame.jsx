@@ -21,8 +21,11 @@ export default function AdminGame() {
   const playerUrl = sessionPin ? `${window.location.origin}/?pin=${sessionPin}` : ''
 
   const wsUrl = sessionId
-    ? buildWsUrl(`/ws?role=admin&sessionId=${sessionId}`)
-    : null
+  ? buildWsUrl({
+      role: 'admin',
+      sessionId
+    })
+  : null
 
   const { send } = useWebSocket({ url: wsUrl, onMessage: handleWsMessage, enabled: !!sessionId })
 
