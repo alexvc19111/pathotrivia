@@ -1,8 +1,14 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { WS_URL } from '../config'
 
-export function buildWsUrl(path = '') {
-  return `${WS_URL}${path}`
+export function buildWsUrl(params = {}) {
+  const url = new URL(WS_URL)
+
+  Object.entries(params).forEach(([key, value]) => {
+    url.searchParams.append(key, value)
+  })
+
+  return url.toString()
 }
 
 export function useWebSocket({ url, onMessage, enabled = true }) {
