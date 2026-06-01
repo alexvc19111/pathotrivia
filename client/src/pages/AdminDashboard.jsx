@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useGame } from '../context/GameContext.jsx'
+import { APP_URL } from '../config'
 import toast from 'react-hot-toast'
 import QuestionEditor from '../components/QuestionEditor.jsx'
 import PDFImporter from '../components/PDFImporter.jsx'
@@ -35,7 +36,7 @@ export default function AdminDashboard() {
   const fetchQuizzes = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/quizzes', { headers: authHeaders() })
+      const res = await fetch(`${APP_URL}/api/quizzes`, { headers: authHeaders() })
       if (!res.ok) throw new Error()
       setQuizzes(await res.json())
     } catch {
@@ -47,7 +48,7 @@ export default function AdminDashboard() {
 
   const fetchQuestions = useCallback(async (quizId) => {
     try {
-      const res = await fetch(`/api/quizzes/${quizId}/questions`, { headers: authHeaders() })
+      const res = await fetch(`${APP_URL}/api/quizzes/${quizId}/questions`, { headers: authHeaders() })
       if (!res.ok) throw new Error()
       setQuestions(await res.json())
     } catch {
@@ -61,7 +62,7 @@ export default function AdminDashboard() {
   async function createQuiz(e) {
     e.preventDefault()
     try {
-      const res = await fetch('/api/quizzes', {
+      const res = await fetch(`${APP_URL}/api/quizzes`, {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify({ title: newQuizTitle, description: newQuizDesc })
@@ -77,7 +78,7 @@ export default function AdminDashboard() {
   async function deleteQuiz(id) {
     if (!confirm('¿Eliminar este quiz y todas sus preguntas?')) return
     try {
-      const res  = await fetch(`/api/quizzes/${id}`, { method: 'DELETE', headers: authHeaders() })
+      const res  = await fetch(`${APP_URL}/api/quizzes/${id}`, { method: 'DELETE', headers: authHeaders() })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Error al eliminar')
       toast.success('Quiz eliminado')
@@ -89,7 +90,7 @@ export default function AdminDashboard() {
   async function deleteQuestion(qId) {
     if (!confirm('¿Eliminar esta pregunta?')) return
     try {
-      const res  = await fetch(`/api/questions/${qId}`, { method: 'DELETE', headers: authHeaders() })
+      const res  = await fetch(`${APP_URL}/api/questions/${qId}`, { method: 'DELETE', headers: authHeaders() })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'No se pudo eliminar')
       toast.success('Pregunta eliminada')
@@ -100,7 +101,7 @@ export default function AdminDashboard() {
   // Abre el editor con la pregunta completa (incluyendo sus opciones)
   async function openEditor(q) {
     try {
-      const res = await fetch(`/api/quizzes/${activeQuiz.id}/questions`, { headers: authHeaders() })
+      const res = await fetch(`${APP_URL}/api/quizzes/${activeQuiz.id}/questions`, { headers: authHeaders() })
       if (res.ok) {
         const all  = await res.json()
         const full = all.find(x => x.id === q.id) ?? q
@@ -118,7 +119,7 @@ export default function AdminDashboard() {
     if (!activeQuiz) return
     setStartingSession(true)
     try {
-      const res  = await fetch('/api/sessions', {
+      const res  = await fetch(`${APP_URL}/api/sessions`, {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify({ quizId: activeQuiz.id })
