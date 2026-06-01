@@ -1,8 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react'
 
-export function buildWsUrl(path) {
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  return `${protocol}//${window.location.host}${path}`
+export function buildWsUrl(path = '') {
+  return `${import.meta.env.VITE_WS_URL}${path}`
 }
 
 export function useWebSocket({ url, onMessage, enabled = true }) {
