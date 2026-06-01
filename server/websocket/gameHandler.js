@@ -528,10 +528,8 @@ async function storePlayerAnswer(sessionId, playerId, answerMessage) {
   }
 }
 
-async function handleConnection(ws) {
-  // BUG EXTRA CORREGIDO: ws.upgradeReq no existe en versiones recientes de 'ws'
-  // la request se pasa manualmente desde el evento 'upgrade' del server
-  const url       = new URL(ws._upgradeReq.url, 'http://localhost')
+async function handleConnection(ws, request) {
+  const url = new URL(request.url, `http://${request.headers.host}`)
   const role      = url.searchParams.get('role')
   const sessionId = url.searchParams.get('sessionId')
   const playerId  = url.searchParams.get('playerId')
@@ -691,8 +689,7 @@ function setupWebSocket(server) {
       return
     }
     wss.handleUpgrade(request, socket, head, (ws) => {
-      ws._upgradeReq = request   // guardamos la request para leerla en handleConnection
-      handleConnection(ws)
+      handleConnection(ws, request)
     })
   })
 }
