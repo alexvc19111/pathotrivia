@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useGame } from '../context/GameContext.jsx'
+import { API_URL } from '../config'
 import toast from 'react-hot-toast'
 
 export default function AdminLogin() {
@@ -14,7 +15,7 @@ export default function AdminLogin() {
     e.preventDefault()
     setLoading(true)
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
