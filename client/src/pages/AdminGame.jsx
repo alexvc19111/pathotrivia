@@ -4,6 +4,7 @@ import { QRCodeSVG } from 'qrcode.react'
 import { useGame } from '../context/GameContext.jsx'
 import { useWebSocket, buildWsUrl } from '../hooks/useWebSocket.js'
 import { useGameState } from '../hooks/useGameState.js'
+import { API_URL } from '../config'
 import toast from 'react-hot-toast'
 
 const ANSWER_COLORS = ['#e53e3e','#3182ce','#38a169','#d69e2e']
@@ -28,7 +29,7 @@ export default function AdminGame() {
   useEffect(() => {
     async function loadSession() {
       try {
-        const res  = await fetch(`/api/sessions/${sessionId}`, { headers: authHeaders() })
+        const res  = await fetch(`${API_URL}/api/sessions/${sessionId}`, { headers: authHeaders() })
         const data = await res.json()
         if (!res.ok) throw new Error(data.error)
         setSession(data)
