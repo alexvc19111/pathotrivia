@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { API_URL } from '../config'
 import { useGame } from '../context/GameContext.jsx'
 import { useWebSocket, buildWsUrl } from '../hooks/useWebSocket.js'
 import { useGameState } from '../hooks/useGameState.js'
@@ -84,7 +85,7 @@ export default function PlayerLobby() {
     if (!pin || !nickname) return
     setLoading(true)
     try {
-      const res  = await fetch('/api/sessions/join', {
+      const res = await fetch(`${API_URL}/api/sessions/join`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pin: pin.trim(), nickname: nickname.trim(), avatar })
