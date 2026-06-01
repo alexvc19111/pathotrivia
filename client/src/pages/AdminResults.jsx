@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useGame } from '../context/GameContext.jsx'
+import { API_URL } from '../config'
 import toast from 'react-hot-toast'
 
 export default function AdminResults() {
@@ -14,7 +15,7 @@ export default function AdminResults() {
   useEffect(() => {
     async function load() {
       try {
-        const res  = await fetch(`/api/sessions/${sessionId}/results`, { headers: authHeaders() })
+        const res  = await fetch(`${API_URL}/api/sessions/${sessionId}/results`, { headers: authHeaders() })
         const data = await res.json()
         if (!res.ok) throw new Error(data.error)
         setResults(data)
