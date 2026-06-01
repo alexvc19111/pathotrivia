@@ -37,8 +37,12 @@ export default function PlayerLobby() {
   const [loading, setLoading]         = useState(false)
 
   const wsUrl = playerId && session
-    ? buildWsUrl(`/ws?role=player&sessionId=${session.id}&playerId=${playerId}`)
-    : null
+  ? buildWsUrl({
+      role: 'player',
+      sessionId: session.id,
+      playerId
+    })
+  : null
 
   const { send } = useWebSocket({
     url: wsUrl,
