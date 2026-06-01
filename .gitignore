@@ -1,0 +1,28 @@
+# Dependencias
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Variables de entorno — NUNCA subir
+.env
+server/.env
+*.env.local
+
+# Build del frontend
+client/dist/
+client/build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+
+# Uploads temporales
+server/uploads/
