@@ -22,10 +22,17 @@ export function GameProvider({ children }) {
     localStorage.removeItem('admin_token')
   }, [])
 
-  const authHeaders = useCallback(() => ({
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${adminToken}`
-  }), [adminToken])
+  const authHeaders = useCallback(() => {
+  const headers = {
+    'Content-Type': 'application/json'
+  }
+
+  if (adminToken) {
+    headers.Authorization = `Bearer ${adminToken}`
+  }
+
+  return headers
+}, [adminToken])
 
   return (
     <GameContext.Provider value={{
