@@ -1,8 +1,8 @@
 import { useEffect, useRef, useCallback } from 'react'
+import { WS_URL } from '../config'
 
 export function buildWsUrl(path = '') {
-  const baseUrl = import.meta.env.VITE_WS_URL
-  return `${baseUrl}${path}`
+  return `${WS_URL}${path}`
 }
 
 export function useWebSocket({ url, onMessage, enabled = true }) {
