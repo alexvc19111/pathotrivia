@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { X } from 'lucide-react'
+import { API_URL } from '../config'
 import toast from 'react-hot-toast'
+
 
 const TYPE_LABELS = {
   multiple_choice: 'Opción múltiple',
@@ -44,7 +46,7 @@ export default function PDFImporter({ quizId, authHeaders, onDone = () => {}, on
       formData.append('pdf', pdfFile)
 
       // Endpoint de parseo: devuelve las preguntas detectadas sin guardarlas aún
-      const res = await fetch(`/api/quizzes/${quizId}/parse-pdf`, {
+      const res = await fetch(`${API_URL}/api/quizzes/${quizId}/parse-pdf`, {
         method: 'POST',
         headers: { Authorization: authHeaders().Authorization },  // sin Content-Type, lo pone el browser
         body: formData
@@ -75,7 +77,7 @@ export default function PDFImporter({ quizId, authHeaders, onDone = () => {}, on
     setLoading(true)
     setStep('importing')
     try {
-      const res = await fetch(`/api/quizzes/${quizId}/import-pdf`, {
+      const res = await fetch(`${API_URL}/api/quizzes/${quizId}/import-pdf`, {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify({ questions: preview })
