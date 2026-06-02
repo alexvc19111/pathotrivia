@@ -10,7 +10,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE TABLE admins (
     id          SERIAL PRIMARY KEY,
     username    VARCHAR(50)  NOT NULL UNIQUE,
-    password    VARCHAR(255) NOT NULL,   -- bcrypt hash
+    password    VARCHAR(255) NOT NULL,
     created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
@@ -55,17 +55,23 @@ CREATE TABLE questions (
     media_url       TEXT,
     time_limit_sec  INT           NOT NULL DEFAULT 20,
     points          INT           NOT NULL DEFAULT 1000,
+
     -- Slider
     slider_min      NUMERIC,
     slider_max      NUMERIC,
     slider_correct  NUMERIC,
+
     -- Drop Pin
     pin_x           NUMERIC,
     pin_y           NUMERIC,
-    -- Retroalimentación (se muestra al jugador tras revelar resultados)
+
+    -- Retroalimentación
     explanation     TEXT,
+
     created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX idx_questions_quiz_id ON questions(quiz_id);
 
 -- ============================================================
 -- 5. OPCIONES DE RESPUESTA
@@ -76,15 +82,18 @@ CREATE TABLE question_options (
     option_text TEXT    NOT NULL,
     is_correct  BOOLEAN NOT NULL DEFAULT FALSE,
     position    INT     NOT NULL DEFAULT 0,
-    match_group CHAR(1)             -- 'A' o 'B' para matching
+    match_group CHAR(1)
 );
+
+CREATE INDEX idx_question_options_question_id
+    ON question_options(question_id);
 
 -- ============================================================
 -- 6. SESIONES DE JUEGO
 -- ============================================================
 CREATE TABLE game_sessions (
     id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    quiz_id      UUID        NOT NULL REFERENCES quizzes(id),
+    quiz_id      UUID        NOT NULL REFERENCES quizzes(id) ON DELETE CASCADE,
     pin          VARCHAR(8)  NOT NULL UNIQUE,
     status       VARCHAR(20) NOT NULL DEFAULT 'waiting',
     started_at   TIMESTAMPTZ,
@@ -94,6 +103,7 @@ CREATE TABLE game_sessions (
 
 CREATE INDEX idx_sessions_pin    ON game_sessions(pin);
 CREATE INDEX idx_sessions_status ON game_sessions(status);
+CREATE INDEX idx_sessions_quiz   ON game_sessions(quiz_id);
 
 -- ============================================================
 -- 7. JUGADORES
@@ -106,6 +116,7 @@ CREATE TABLE players (
     joined_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     final_score INT         NOT NULL DEFAULT 0,
     final_rank  INT,
+
     UNIQUE (session_id, nickname)
 );
 
@@ -116,17 +127,28 @@ CREATE INDEX idx_players_session ON players(session_id);
 -- ============================================================
 CREATE TABLE player_answers (
     id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    session_id       UUID        NOT NULL REFERENCES game_sessions(id) ON DELETE CASCADE,
-    player_id        UUID        NOT NULL REFERENCES players(id) ON DELETE CASCADE,
-    question_id      UUID        NOT NULL REFERENCES questions(id),
-    answer_option_id UUID        REFERENCES question_options(id),
+
+    session_id       UUID NOT NULL
+        REFERENCES game_sessions(id) ON DELETE CASCADE,
+
+    player_id        UUID NOT NULL
+        REFERENCES players(id) ON DELETE CASCADE,
+
+    question_id      UUID NOT NULL
+        REFERENCES questions(id) ON DELETE CASCADE,
+
+    answer_option_id UUID
+        REFERENCES question_options(id) ON DELETE CASCADE,
+
     answer_text      TEXT,
     answer_numeric   NUMERIC,
     answer_pin_x     NUMERIC,
     answer_pin_y     NUMERIC,
+
     is_correct       BOOLEAN,
     points_earned    INT         NOT NULL DEFAULT 0,
     response_time_ms INT,
+
     answered_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -139,17 +161,27 @@ CREATE INDEX idx_answers_question ON player_answers(question_id);
 -- ============================================================
 CREATE TABLE session_question_stats (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    session_id      UUID NOT NULL REFERENCES game_sessions(id) ON DELETE CASCADE,
-    question_id     UUID NOT NULL REFERENCES questions(id),
+
+    session_id      UUID NOT NULL
+        REFERENCES game_sessions(id) ON DELETE CASCADE,
+
+    question_id     UUID NOT NULL
+        REFERENCES questions(id) ON DELETE CASCADE,
+
     started_at      TIMESTAMPTZ,
     finished_at     TIMESTAMPTZ,
+
     total_answers   INT NOT NULL DEFAULT 0,
     correct_answers INT NOT NULL DEFAULT 0,
+
     UNIQUE (session_id, question_id)
 );
 
+CREATE INDEX idx_stats_session  ON session_question_stats(session_id);
+CREATE INDEX idx_stats_question ON session_question_stats(question_id);
+
 -- ============================================================
--- 10. TRIGGER updated_at en quizzes
+-- 10. TRIGGER updated_at EN quizzes
 -- ============================================================
 CREATE OR REPLACE FUNCTION update_updated_at()
 RETURNS TRIGGER AS $$
@@ -161,5 +193,5 @@ $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trg_quizzes_updated_at
     BEFORE UPDATE ON quizzes
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at();
