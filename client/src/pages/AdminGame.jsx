@@ -167,48 +167,24 @@ export default function AdminGame() {
     const qType = activeQuestion?.type?.toLowerCase()
     const qOptions = activeQuestion?.options
 
-    // 🔍 EXTRACCIÓN ULTRA COMPATIBLE CON LOGS PARA DEPURACIÓN
+    // ✨ EXTRACCIÓN MODIFICADA CON PRIORIDAD AL CAMPO INYECTADO DESDE EL BACKEND
     let textSolutions = []
     if (qType === 'type_answer') {
-      console.log('--- DEPURACIÓN TYPE_ANSWER ---')
-      console.log('activeQuestion:', activeQuestion)
-      console.log('qStats:', qStats)
-
-      // 1. Intento estándar por opciones
-      if (Array.isArray(qOptions) && qOptions.length > 0) {
-        textSolutions = qOptions.map(o => o.optionText ?? o.option_text ?? o.text ?? o.accepted_text ?? o.value).filter(Boolean)
-      } 
-      
-      // 2. Propiedades directas de la pregunta (Ampliadas)
-      if (textSolutions.length === 0 && activeQuestion) {
-        const directValue = activeQuestion.correctAnswer ?? 
-                            activeQuestion.correct_answer ?? 
-                            activeQuestion.acceptedAnswers ?? 
-                            activeQuestion.accepted_answers ?? 
-                            activeQuestion.answer ?? 
-                            activeQuestion.answers ?? 
-                            activeQuestion.text
-        if (directValue) {
-          textSolutions = Array.isArray(directValue) ? directValue : [directValue]
-        }
+      // 1. Prioridad absoluta: El texto correcto inyectado por el backend en las estadísticas
+      if (qStats.correctText || qStats.correct_text) {
+        textSolutions = [qStats.correctText ?? qStats.correct_text]
       }
-
-      // 3. Buscar en las estadísticas de distribución por si el backend mandó el flag 'isCorrect' ahí
+      // 2. Respaldo por opciones locales si existieran
+      if (textSolutions.length === 0 && Array.isArray(qOptions) && qOptions.length > 0) {
+        textSolutions = qOptions.map(o => o.optionText ?? o.option_text ?? o.text).filter(Boolean)
+      } 
+      // 3. Respaldo por distribución si viene marcado como correcto
       if (textSolutions.length === 0 && Array.isArray(qStats?.distribution)) {
         textSolutions = qStats.distribution
-          .filter(d => d.isCorrect === true || d.is_correct === true || d.correct === true)
-          .map(d => d.label ?? d.text)
+          .filter(d => d.isCorrect === true || d.is_correct === true)
+          .map(d => d.label)
           .filter(Boolean)
       }
-
-      // 4. SALVAVIDAS EXTREMO: Si hay distribución de respuestas de los alumnos y el contenedor está vacío,
-      // usará esas respuestas de la distribución para que el recuadro nunca se quede invisible.
-      if (textSolutions.length === 0 && Array.isArray(qStats?.distribution)) {
-        textSolutions = qStats.distribution.map(d => d.label).filter(Boolean)
-      }
-      
-      console.log('Soluciones finales extraídas:', textSolutions)
-      console.log('------------------------------')
     }
 
     return (
@@ -280,11 +256,11 @@ export default function AdminGame() {
           )
         })()}
 
-        {/* CASO C: TYPE_ANSWER (RESPUESTA ESCRITA BLINDADA) */}
-        {qType === 'type_answer' && textSolutions.length > 0 && (
+        {/* CASO C: TYPE_ANSWER (RESPUESTA ESCRITA REPARADA) */}
+        {textSolutions.length > 0 && (
           <div className="glass animate-fadeIn" style={{ borderRadius:'16px', padding:'1.5rem', width:'100%', maxWidth:'600px', border:'1px solid var(--green)' }}>
             <p style={{ fontFamily:'Syne, sans-serif', fontWeight:700, color:'var(--green)', fontSize:'0.85rem', marginBottom:'1rem', letterSpacing:'0.05em' }}>
-              ✏️ RESPUESTAS VALIDADAS COMO CORRECTAS
+              ✏️ RESPUESTA VALIDADA COMO CORRECTA
             </p>
             <div style={{ display:'flex', flexWrap:'wrap', gap:'0.5rem', justifyContent:'center' }}>
               {textSolutions.map((text, idx) => (
@@ -393,7 +369,7 @@ export default function AdminGame() {
               <div key={rank} className="animate-popIn" style={{ animationDelay:`${rank*0.2}s`, textAlign:'center', width:'160px' }}>
                 <div style={{ fontSize:'2.5rem', marginBottom:'0.5rem' }}>{player.avatar??'🎮'}</div>
                 <p style={{ fontFamily:'Syne, sans-serif', fontWeight:700, fontSize:'1rem', marginBottom:'0.25rem' }}>{player.nickname}</p>
-                <p style={{ color:'var(--accent2)', fontFamily:'Syne, sans-serif', fontWeight:800, fontSize:'1.2rem', marginBottom:'0.75rem' }}>{player.score?.toLocaleString()}</p>
+                <p style={{ color:'var(--text2)', fontFamily:'Syne, sans-serif', fontWeight:800, fontSize:'1.2rem', marginBottom:'0.75rem' }}>{player.score?.toLocaleString()}</p>
                 <div style={{ height:heights[rank], background:bgColors[rank], border:'1px solid rgba(255,255,255,0.1)', borderRadius:'12px 12px 0 0', display:'flex', alignItems:'flex-start', justifyContent:'center', paddingTop:'1rem', fontSize:'2rem' }}>{medals[rank]}</div>
               </div>
             )
