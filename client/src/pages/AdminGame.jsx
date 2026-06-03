@@ -143,7 +143,7 @@ export default function AdminGame() {
               <span style={{ color:'var(--text3)', fontSize:'0.85rem', textTransform:'capitalize' }}>{currentQ.question?.type?.replace(/_/g,' ')}</span>
             </div>
           </div>
-          {currentQ.question?.options && (
+          {currentQ.question?.options && currentQ.question?.type !== 'type_answer' && (
             <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:'0.75rem', width:'100%', maxWidth:'700px' }}>
               {currentQ.question.options.map((opt, i) => (
                 <div key={opt.id} style={{ background:ANSWER_COLORS[i%4], borderRadius:'14px', padding:'0.875rem 1.25rem', display:'flex', alignItems:'center', gap:'0.75rem' }}>
