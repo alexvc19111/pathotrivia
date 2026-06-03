@@ -258,9 +258,11 @@ export default function AdminDashboard() {
                         <button
                           onClick={() => openEditor(q)}
                           style={{ display: 'flex', alignItems:'center', gap:'0.4rem', background:'rgba(59,130,246,0.12)', border:'1px solid rgba(59,130,246,0.25)', borderRadius:'8px', padding:'0.4rem 0.75rem', cursor:'pointer', color:'#3b82f6', fontSize:'0.8rem',fontWeight:600 }}
+                        >
                         <Pencil size={14} />
                         Editar
                       </button>
+                        <button
                           onClick={() => deleteQuestion(q.id)}
                           style={{display:'flex', alignItems:'center', gap:'0.4rem', background:'rgba(239,68,68,0.12)', border:'1px solid rgba(239,68,68,0.25)', borderRadius:'8px', padding:'0.4rem 0.75rem', cursor:'pointer', color:'#ef4444', fontSize:'0.8rem', fontWeight:600 }}
                         >
