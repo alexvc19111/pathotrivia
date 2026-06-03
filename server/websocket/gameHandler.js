@@ -253,16 +253,16 @@ async function handleShowResults(sessionId) {
           return acc
     }, {})
 
-stats.correctMatches = colA.map(left => {
-  const right = colB.find(
-    r => Number(r.position) === Number(left.position)
-  )
+    stats.correctMatches = colA.map(left => {
+      const right = colB.find(
+        r => Number(r.position) === Number(left.position)
+      )
 
-  return {
-    left: left.option_text,
-    right: right?.option_text || ''
-  }
-})
+      return {
+        left: left.option_text,
+        right: right?.option_text || ''
+      }
+    })
     let correct = 0
     for (const answer of answers) {
       try {
@@ -280,7 +280,7 @@ stats.correctMatches = colA.map(left => {
       { label: 'Con errores',       count: wrong,   pct: stats.totalAnswers ? Math.round(wrong/stats.totalAnswers*100)   : 0, isCorrect: false }
     ]
 
-  // Tipos de respuesta abierta: agrupar por texto
+  // CORREGIDO: Tipos de respuesta abierta - Inyección robusta del correctText
   } else if (['brainstorm','word_cloud','type_answer'].includes(qType)) {
     const counts = {}
     for (const answer of answers) {
@@ -292,14 +292,20 @@ stats.correctMatches = colA.map(left => {
     const correctOption = game.currentQuestion.options?.find(o => o.is_correct || o.isCorrect)
     const correctTextNorm = correctOption ? String(correctOption.option_text || correctOption.optionText).trim().toLowerCase() : null
     
+    // ✨ SOLUCIÓN DEL BUG: Añadir el texto original de la BD en la raíz de stats
+    if (correctOption) {
+      stats.correctText = correctOption.option_text || correctOption.optionText
+    }
+
     stats.distribution = Object.entries(counts)
       .sort((a, b) => b[1] - a[1])  // ordenar por frecuencia
-      .slice(0, 10)                   // máximo 10 respuestas distintas
+      .slice(0, 10)                 // máximo 10 respuestas distintas
       .map(([label, count]) => ({
         label,
         count,
         pct:       stats.totalAnswers ? Math.round((count / stats.totalAnswers) * 100) : 0,
-        isCorrect: correctTextNorm ? (label.trim().toLowerCase() === correctTextNorm) : false      }))
+        isCorrect: correctTextNorm ? (label.trim().toLowerCase() === correctTextNorm) : false      
+      }))
 
   // Slider: mostrar valor correcto vs respuestas
   } else if (qType === 'slider') {
@@ -316,13 +322,12 @@ stats.correctMatches = colA.map(left => {
 
   const players = await getPlayerScores(sessionId)
 
-  
   broadcast(sessionId, {
     type:        'QUESTION_RESULTS',
     stats,
     players,
     explanation: game.currentQuestion?.explanation || null,
-    question:    formatQuestionForClient(game.currentQuestion, false) // ✨ ¡Crucial para que aparezcan las parejas!
+    question:    formatQuestionForClient(game.currentQuestion, false) // ¡Crucial para las parejas!
   })
 
   const game2 = games.get(sessionId)
@@ -405,10 +410,7 @@ async function evaluateAnswer(question, answer) {
           (Number(question.pin_x) - Number(answer.answerPinX)) ** 2 +
           (Number(question.pin_y) - Number(answer.answerPinY)) ** 2
         )
-        // Tolerancia de 10% — jugable en móvil con dedo
-        // El círculo punteado en el editor muestra ~12% visualmente (margen visual mayor)
         isCorrect = dist <= 10
-        // Puntos proporcionales a la precisión: más cerca = más puntos
         if (isCorrect) {
           const accuracy = Math.max(0, 1 - dist / 10)
           points = Math.round(question.points * (0.5 + 0.5 * accuracy))
@@ -439,7 +441,6 @@ async function evaluateAnswer(question, answer) {
         const colA = question.options.filter(o => (o.match_group ?? o.matchGroup) === 'A')
         const colB = question.options.filter(o => (o.match_group ?? o.matchGroup) === 'B')
         const correctPairs = colA.reduce((acc, o) => {
-          // Buscar par por position coincidente en columna B
           const pair = colB.find(t => Number(t.position) === Number(o.position))
           if (pair) acc[o.id] = pair.id
           return acc
@@ -451,7 +452,6 @@ async function evaluateAnswer(question, answer) {
       }
       break
     }
-    // Brainstorm y word_cloud: siempre correcto visualmente, sin puntos
     case 'brainstorm':
     case 'word_cloud': {
       isCorrect = true
@@ -480,7 +480,6 @@ async function storePlayerAnswer(sessionId, playerId, answerMessage) {
   if (!game || !game.currentQuestion) return null
 
   try {
-    // Evitar respuesta doble
     const existing = await pool.query(
       `SELECT id FROM player_answers
        WHERE session_id=$1 AND player_id=$2 AND question_id=$3`,
@@ -490,7 +489,6 @@ async function storePlayerAnswer(sessionId, playerId, answerMessage) {
 
     const evaluation = await evaluateAnswer(game.currentQuestion, answerMessage)
 
-    // Resolver el UUID real de la opción si viene como booleano o texto
     let resolvedOptionId = answerMessage.answerOptionId || null
     if (resolvedOptionId && game.currentQuestion.options) {
       const input = String(resolvedOptionId).trim().toLowerCase()
@@ -513,8 +511,8 @@ async function storePlayerAnswer(sessionId, playerId, answerMessage) {
       answer_option_id: resolvedOptionId,
       answer_text:      answerMessage.answerText   || null,
       answer_numeric:   answerMessage.answerNumeric != null ? Number(answerMessage.answerNumeric) : null,
-      answer_pin_x:     answerMessage.answerPinX   != null ? Number(answerMessage.answerPinX)    : null,
-      answer_pin_y:     answerMessage.answerPinY   != null ? Number(answerMessage.answerPinY)    : null,
+      answer_pin_x:      answerMessage.answerPinX   != null ? Number(answerMessage.answerPinX)    : null,
+      answer_pin_y:      answerMessage.answerPinY   != null ? Number(answerMessage.answerPinY)    : null,
       is_correct:       evaluation.isCorrect,
       points_earned:    evaluation.points,
       response_time_ms: game.questionStartedAt
@@ -563,7 +561,7 @@ async function handleConnection(ws, request) {
       currentQuestion: null,
       answers:         [],
       phase:           'lobby',
-      questionTimer:   null   // timeout que dispara showResults al acabar el tiempo
+      questionTimer:   null  
     }
     games.set(sessionId, game)
   }
@@ -586,7 +584,6 @@ async function handleConnection(ws, request) {
       }
     })
 
-    // Cargar jugadores que ya estaban conectados (reconexión del admin)
     const players = await loadSessionPlayers(sessionId)
     for (const p of players) {
       if (!game.playerSockets.has(p.id)) {
@@ -595,7 +592,6 @@ async function handleConnection(ws, request) {
     }
     await broadcastPlayerList(sessionId)
 
-    // Si el juego ya está en curso, restaurar el estado actual para el admin
     if (game.phase === 'question' && game.currentQuestion) {
       send(ws, {
         type:           'QUESTION',
@@ -633,7 +629,6 @@ async function handleConnection(ws, request) {
     const player = playerResult.rows[0]
     game.playerSockets.set(playerId, { ws, nickname: player.nickname, avatar: player.avatar })
 
-    // Si el juego ya está en curso, enviar la pregunta actual al jugador reconectado
     if (game.phase === 'question' && game.currentQuestion) {
       send(ws, {
         type: 'QUESTION',
@@ -660,12 +655,10 @@ async function handleConnection(ws, request) {
 
       if (role === 'player' && payload.type === 'ANSWER') {
         const record = await storePlayerAnswer(sessionId, playerId, payload)
-        if (!record) return // respuesta duplicada o error
+        if (!record) return 
 
-        // Solo confirmamos recepción — el resultado se revela en SHOW_RESULTS
         send(ws, { type: 'ANSWER_RECEIVED' })
 
-        // Notificar al admin cuántos han respondido
         const game2 = games.get(sessionId)
         if (game2?.adminSocket) {
           send(game2.adminSocket, {
