@@ -132,6 +132,19 @@ export default function AdminGame() {
   }
 
   if (phase==='question' && currentQ) {
+    const isMatching = currentQ?.question?.type === 'matching'
+
+  const colA = isMatching
+    ? shuffledOptionsRef.current.filter(
+        o => (o.match_group ?? o.matchGroup ?? o.match_back) === 'A'
+      )
+    : []
+
+  const colB = isMatching
+    ? shuffledOptionsRef.current.filter(
+        o => (o.match_group ?? o.matchGroup ?? o.match_back) === 'B'
+      )
+    : []
     const radius=54, circ=2*Math.PI*radius
     const progress = circ - (timeLeft/(currentQ.timeLimit??20))*circ
     return (
