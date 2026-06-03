@@ -55,25 +55,26 @@ export default function AdminGame() {
     ) {
       savedQuestionRef.current = currentQ.question
       if (currentQ.question.type === 'matching') {
-        const colA = currentQ.question.options.filter(
-          o => (o.match_group ?? o.matchGroup ?? o.match_back) === 'A'
-        )
-        const colB = currentQ.question.options.filter(
-          o => (o.match_group ?? o.matchGroup ?? o.match_back) === 'B'
-        )
-        shuffledOptionsRef.current = [
-          ...colA.sort(() => Math.random() - 0.5),
-          ...colB.sort(() => Math.random() - 0.5)
-        ]
-      }
-      else if (currentQ.question.type === 'puzzle') {
-        shuffledOptionsRef.current =
-          [...currentQ.question.options].sort(() => Math.random() - 0.5)
-      }
-      else {
-        shuffledOptionsRef.current = currentQ.question.options
-      }
-    }
+  const colA = currentQ.question.options.filter(
+    o => (o.match_group ?? o.matchGroup ?? o.match_back) === 'A'
+  )
+
+  const colB = [...currentQ.question.options.filter(
+    o => (o.match_group ?? o.matchGroup ?? o.match_back) === 'B'
+  )]
+
+  colB.sort(() => Math.random() - 0.5)
+
+  shuffledOptionsRef.current = [...colA, ...colB]
+}
+  else if (currentQ.question.type === 'puzzle') {
+    shuffledOptionsRef.current =
+      [...currentQ.question.options].sort(() => Math.random() - 0.5)
+  }
+  else {
+    shuffledOptionsRef.current = currentQ.question.options
+  }
+}
 
     if (phase==='question' && currentQ) {
       setTimeLeft(currentQ.timeLimit ?? 20)
@@ -166,16 +167,104 @@ export default function AdminGame() {
               <span style={{ color:'var(--text3)', fontSize:'0.85rem', textTransform:'capitalize' }}>{currentQ.question?.type?.replace(/_/g,' ')}</span>
             </div>
           </div>
-          {currentQ.question?.options && !['type_answer','word_cloud','brainstorm'].includes(currentQ.question?.type) && (
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:'0.75rem', width:'100%', maxWidth:'700px' }}>
-              {shuffledOptionsRef.current.map((opt, i) => (
-                <div key={opt.id} style={{ background:ANSWER_COLORS[i%4], borderRadius:'14px', padding:'0.875rem 1.25rem', display:'flex', alignItems:'center', gap:'0.75rem' }}>
-                  <span style={{ fontSize:'1.1rem', color:'white' }}>{ANSWER_ICONS[i%4]}</span>
-                  <span style={{ color:'white', fontFamily:'Syne, sans-serif', fontWeight:600, fontSize:'0.95rem' }}>{opt.optionText}</span>
-                </div>
-              ))}
-            </div>
-          )}
+          {currentQ.question?.options &&
+ !['type_answer','word_cloud','brainstorm'].includes(currentQ.question?.type) && (
+
+  isMatching ? (
+
+    <div
+      style={{
+        display:'grid',
+        gridTemplateColumns:'1fr 1fr',
+        gap:'2rem',
+        width:'100%',
+        maxWidth:'900px'
+      }}
+    >
+      <div style={{ display:'flex', flexDirection:'column', gap:'0.75rem' }}>
+        {colA.map((opt, i) => (
+          <div
+            key={opt.id}
+            style={{
+              background:'#e53e3e',
+              borderRadius:'14px',
+              padding:'0.875rem 1.25rem',
+              display:'flex',
+              alignItems:'center',
+              gap:'0.75rem'
+            }}
+          >
+            <span style={{ color:'white' }}>▲</span>
+            <span style={{ color:'white', fontWeight:600 }}>
+              {opt.optionText}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display:'flex', flexDirection:'column', gap:'0.75rem' }}>
+        {colB.map((opt, i) => (
+          <div
+            key={opt.id}
+            style={{
+              background:'#3182ce',
+              borderRadius:'14px',
+              padding:'0.875rem 1.25rem',
+              display:'flex',
+              alignItems:'center',
+              gap:'0.75rem'
+            }}
+          >
+            <span style={{ color:'white' }}>◆</span>
+            <span style={{ color:'white', fontWeight:600 }}>
+              {opt.optionText}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+
+  ) : (
+
+    <div
+      style={{
+        display:'grid',
+        gridTemplateColumns:'repeat(2,1fr)',
+        gap:'0.75rem',
+        width:'100%',
+        maxWidth:'700px'
+      }}
+    >
+      {shuffledOptionsRef.current.map((opt, i) => (
+        <div
+          key={opt.id}
+          style={{
+            background:ANSWER_COLORS[i%4],
+            borderRadius:'14px',
+            padding:'0.875rem 1.25rem',
+            display:'flex',
+            alignItems:'center',
+            gap:'0.75rem'
+          }}
+        >
+          <span style={{ color:'white' }}>
+            {ANSWER_ICONS[i%4]}
+          </span>
+          <span
+            style={{
+              color:'white',
+              fontFamily:'Syne, sans-serif',
+              fontWeight:600
+            }}
+          >
+            {opt.optionText}
+          </span>
+        </div>
+      ))}
+    </div>
+
+  )
+)}
           <button className="btn-primary" onClick={sendShowResults} style={{ padding:'0.875rem 2.5rem' }}>Mostrar resultados →</button>
         </div>
       </div>
