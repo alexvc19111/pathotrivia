@@ -131,7 +131,7 @@ export default function AdminGame() {
             <h2 style={{ fontFamily:'Syne, sans-serif', fontWeight:800, fontSize:'1.75rem', lineHeight:1.3 }}>{currentQ.question?.questionText}</h2>
             <div style={{ display:'flex', gap:'1rem', justifyContent:'center', marginTop:'1rem' }}>
               <span style={{ color:'var(--text3)', fontSize:'0.85rem' }}>{currentQ.question?.points??1000} pts</span>
-              <span style={{ color:'var(--text3)', fontSize:'0.85rem' }}>·</span>
+              <span style={{ color:'var(--text3)', fontSize:'0.85rem', textTransform:'capitalize' }}>·</span>
               <span style={{ color:'var(--text3)', fontSize:'0.85rem', textTransform:'capitalize' }}>{currentQ.question?.type?.replace(/_/g,' ')}</span>
             </div>
           </div>
@@ -154,12 +154,55 @@ export default function AdminGame() {
 
   if (phase==='results' && qStats) {
     const sortedPlayers = [...players].sort((a,b)=>b.score-a.score).slice(0,5)
+    
+    // OBTENER EL TIPO DE PREGUNTA ACTUAL
+    const qType = currentQ?.question?.type
+
     return (
       <div style={{ minHeight:'100vh', background:'var(--bg)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'2rem', gap:'2rem' }}>
         <div className="animate-popIn" style={{ textAlign:'center' }}>
           <h2 style={{ fontFamily:'Syne, sans-serif', fontWeight:800, fontSize:'2rem', marginBottom:'0.5rem' }}>Resultados</h2>
           <p style={{ color:'var(--text3)', fontSize:'0.9rem' }}>{qStats.correctAnswers} de {qStats.totalAnswers} respuestas correctas{qStats.totalAnswers>0?` (${Math.round(qStats.correctAnswers/qStats.totalAnswers*100)}%)`:''}</p>
         </div>
+
+        {/* =======================================================
+            NUEVA SECCIÓN: PANEL DE SOLUCIÓN CORRECTA PARA PUZZLE
+           ======================================================= */}
+        {qType === 'puzzle' && currentQ?.question?.options && (
+          <div className="glass animate-fadeIn" style={{ borderRadius:'16px', padding:'1.5rem', width:'100%', maxWidth:'600px', border:'1px solid var(--green)' }}>
+            <p style={{ fontFamily:'Syne, sans-serif', fontWeight:700, color:'var(--green)', fontSize:'0.85rem', marginBottom:'1rem', letterSpacing:'0.05em' }}>
+              ✨ ORDEN CORRECTO DE LA SOLUCIÓN
+            </p>
+            <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem' }}>
+              {[...currentQ.question.options]
+                // Ordenamos numéricamente si existe el campo .order o .correctOrder. 
+                // Si no existe, asume que el array original del backend ya venía bien estructurado.
+                .sort((a, b) => (a.order ?? a.correctOrder ?? 0) - (b.order ?? b.correctOrder ?? 0))
+                .map((opt, idx) => (
+                  <div 
+                    key={opt.id} 
+                    style={{ 
+                      background:'var(--surface)', 
+                      padding:'0.75rem 1rem', 
+                      borderRadius:'10px', 
+                      display:'flex', 
+                      alignItems:'center', 
+                      gap:'0.75rem',
+                      border:'1px solid var(--border)'
+                    }}
+                  >
+                    <span style={{ fontFamily:'Syne, sans-serif', fontWeight:800, color:'var(--accent2)', minWidth:'24px' }}>
+                      {idx + 1}.
+                    </span>
+                    <span style={{ color:'var(--text)', fontSize:'0.95rem', fontWeight:500 }}>
+                      {opt.optionText ?? opt.option_text}
+                    </span>
+                    <span style={{ marginLeft:'auto', color:'var(--green)' }}>✓</span>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
 
         {/* Retroalimentación de la pregunta */}
         {explanation && (
@@ -168,8 +211,8 @@ export default function AdminGame() {
             <p style={{ color:'var(--text2)', fontSize:'0.95rem', lineHeight:1.5 }}>{explanation}</p>
           </div>
         )}
+
         {qStats.distribution && qStats.distribution.length > 0 && (() => {
-          const qType = currentQ?.question?.type
           const isOpenType = ['word_cloud','brainstorm','type_answer'].includes(qType)
 
           if (isOpenType) {
@@ -200,7 +243,9 @@ export default function AdminGame() {
             )
           }
 
-          // Tipos con opciones: barras normales
+          // Tipos con opciones: barras normales (Ocultar si es puzzle para no saturar la pantalla)
+          if (qType === 'puzzle') return null
+
           return (
             <div className="glass animate-fadeIn" style={{ borderRadius:'16px', padding:'1.5rem', width:'100%', maxWidth:'600px' }}>
               <p style={{ fontFamily:'Syne, sans-serif', fontWeight:600, color:'var(--text2)', fontSize:'0.85rem', marginBottom:'1rem' }}>DISTRIBUCIÓN DE RESPUESTAS</p>
@@ -218,6 +263,7 @@ export default function AdminGame() {
             </div>
           )
         })()}
+
         <div className="glass animate-fadeIn" style={{ borderRadius:'16px', padding:'1.5rem', width:'100%', maxWidth:'600px' }}>
           <p style={{ fontFamily:'Syne, sans-serif', fontWeight:600, color:'var(--text2)', fontSize:'0.85rem', marginBottom:'1rem' }}>CLASIFICACIÓN</p>
           {sortedPlayers.map((p,i) => (
