@@ -125,8 +125,6 @@ async function broadcastPlayerList(sessionId) {
   for (const [playerId, player] of game.playerSockets.entries()) {
     players.push({ id: playerId, nickname: player.nickname, avatar: player.avatar })
   }
-  // BUG 1 CORREGIDO: antes enviaba { type: 'PLAYERS_UPDATE', data: players }
-  // pero el frontend escucha { type: 'PLAYERS_UPDATE', players: [...] }
   broadcast(sessionId, { type: 'PLAYERS_UPDATE', players })
 }
 
@@ -148,12 +146,10 @@ async function handleNextQuestion(sessionId) {
   game.currentQuestion      = game.questions[game.currentIndex]
   game.answers              = []
   game.phase                = 'question'
-  game.questionStartedAt    = Date.now()  // para calcular response_time_ms real
+  game.questionStartedAt    = Date.now()
 
-  // Limpiar timer anterior si existe
   if (game.questionTimer) clearTimeout(game.questionTimer)
 
-  // Auto-revelar resultados cuando acaba el tiempo (+ 500ms de margen de red)
   const timeLimitMs = (game.currentQuestion.time_limit_sec * 1000) + 500
   game.questionTimer = setTimeout(() => {
     if (games.get(sessionId)?.phase === 'question') {
@@ -166,11 +162,6 @@ async function handleNextQuestion(sessionId) {
     [sessionId]
   )
 
-  // BUG 2 CORREGIDO: antes enviaba { type: 'QUESTION', data: {...} }
-  // pero el frontend (useGameState) escucha { type: 'QUESTION', index, totalQuestions, question }
-  // sin el wrapper "data". Ahora el payload es plano y además:
-  // - Al admin le mandamos is_correct para mostrar las respuestas correctas en pantalla
-  // - Al jugador NO le mandamos is_correct para que no haga trampa
   const basePayload = {
     type: 'QUESTION',
     index: game.currentIndex,
@@ -181,13 +172,13 @@ async function handleNextQuestion(sessionId) {
   if (game.adminSocket) {
     send(game.adminSocket, {
       ...basePayload,
-      question: formatQuestionForClient(game.currentQuestion, false) // con is_correct
+      question: formatQuestionForClient(game.currentQuestion, false)
     })
   }
 
   broadcastToPlayers(sessionId, {
     ...basePayload,
-    question: formatQuestionForClient(game.currentQuestion, true) // sin is_correct
+    question: formatQuestionForClient(game.currentQuestion, true)
   })
 }
 
@@ -195,10 +186,7 @@ async function handleShowResults(sessionId) {
   const game = games.get(sessionId)
   if (!game || !game.currentQuestion) return
 
-  // Cancelar el timer automático si el admin lo presionó antes de que acabara
   if (game.questionTimer) { clearTimeout(game.questionTimer); game.questionTimer = null }
-
-  // Evitar doble ejecución si el timer y el admin coinciden
   if (game.phase !== 'question') return
   game.phase = 'results'
 
@@ -257,7 +245,6 @@ async function handleShowResults(sessionId) {
       const right = colB.find(
         r => Number(r.position) === Number(left.position)
       )
-
       return {
         left: left.option_text,
         right: right?.option_text || ''
@@ -280,31 +267,37 @@ async function handleShowResults(sessionId) {
       { label: 'Con errores',       count: wrong,   pct: stats.totalAnswers ? Math.round(wrong/stats.totalAnswers*100)   : 0, isCorrect: false }
     ]
 
-  // CORREGIDO: Tipos de respuesta abierta - Inyección robusta del correctText
+  // ✨ FIX COMPLETO PARA TYPE_ANSWER Y ESTADÍSTICAS ABIERTAS
   } else if (['brainstorm','word_cloud','type_answer'].includes(qType)) {
     const counts = {}
     for (const answer of answers) {
       if (!answer.answer_text) continue
-      const key = String(answer.answer_text).trim().toLowerCase()
-      counts[key] = (counts[key] || 0) + 1
+      // Guardamos la respuesta tal cual para mostrarla estéticamente, pero agrupamos de forma limpia
+      const normalizedKey = String(answer.answer_text).trim().replace(/\s+/g, ' ')
+      counts[normalizedKey] = (counts[normalizedKey] || 0) + 1
     }
 
-    const correctOption = game.currentQuestion.options?.find(o => o.is_correct || o.isCorrect)
-    const correctTextNorm = correctOption ? String(correctOption.option_text || correctOption.optionText).trim().toLowerCase() : null
+    // Buscamos la respuesta marcada como correcta de la base de datos (usando las columnas reales de postgres)
+    const dbCorrectOption = game.currentQuestion.options?.find(o => o.is_correct === true)
     
-    // ✨ SOLUCIÓN DEL BUG: Añadir el texto original de la BD en la raíz de stats
-    if (correctOption) {
-      stats.correctText = correctOption.option_text || correctOption.optionText
+    // Si existe, la inyectamos directamente en la raíz de stats
+    if (dbCorrectOption) {
+      stats.correctText = dbCorrectOption.option_text
+      stats.correct_text = dbCorrectOption.option_text
     }
+
+    const normalize = s => String(s).trim().toLowerCase().replace(/\s+/g, ' ')
+    const correctTextNorm = dbCorrectOption ? normalize(dbCorrectOption.option_text) : null
 
     stats.distribution = Object.entries(counts)
-      .sort((a, b) => b[1] - a[1])  // ordenar por frecuencia
+      .sort((a, b) => b[1] - a[1])  // ordenar por frecuencia de respuestas
       .slice(0, 10)                 // máximo 10 respuestas distintas
       .map(([label, count]) => ({
         label,
         count,
-        pct:       stats.totalAnswers ? Math.round((count / stats.totalAnswers) * 100) : 0,
-        isCorrect: correctTextNorm ? (label.trim().toLowerCase() === correctTextNorm) : false      
+        pct: stats.totalAnswers ? Math.round((count / stats.totalAnswers) * 100) : 0,
+        // Comparamos de forma normalizada (minúsculas y sin espacios extra) para encender la barra verde
+        isCorrect: correctTextNorm ? (normalize(label) === correctTextNorm) : false      
       }))
 
   // Slider: mostrar valor correcto vs respuestas
@@ -327,7 +320,7 @@ async function handleShowResults(sessionId) {
     stats,
     players,
     explanation: game.currentQuestion?.explanation || null,
-    question:    formatQuestionForClient(game.currentQuestion, false) // ¡Crucial para las parejas!
+    question:    formatQuestionForClient(game.currentQuestion, false)
   })
 
   const game2 = games.get(sessionId)
@@ -360,7 +353,6 @@ async function endGame(sessionId) {
 
   const players = await getPlayerScores(sessionId)
 
-  // Actualizar final_score y final_rank en BD
   for (const p of players) {
     await pool.query(
       `UPDATE players SET final_score = $1, final_rank = $2 WHERE id = $3`,
@@ -511,8 +503,8 @@ async function storePlayerAnswer(sessionId, playerId, answerMessage) {
       answer_option_id: resolvedOptionId,
       answer_text:      answerMessage.answerText   || null,
       answer_numeric:   answerMessage.answerNumeric != null ? Number(answerMessage.answerNumeric) : null,
-      answer_pin_x:      answerMessage.answerPinX   != null ? Number(answerMessage.answerPinX)    : null,
-      answer_pin_y:      answerMessage.answerPinY   != null ? Number(answerMessage.answerPinY)    : null,
+      answer_pin_x:     answerMessage.answerPinX   != null ? Number(answerMessage.answerPinX)    : null,
+      answer_pin_y:     answerMessage.answerPinY   != null ? Number(answerMessage.answerPinY)    : null,
       is_correct:       evaluation.isCorrect,
       points_earned:    evaluation.points,
       response_time_ms: game.questionStartedAt
@@ -525,7 +517,7 @@ async function storePlayerAnswer(sessionId, playerId, answerMessage) {
          (session_id, player_id, question_id, answer_option_id, answer_text,
           answer_numeric, answer_pin_x, answer_pin_y, is_correct, points_earned, response_time_ms)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
-      [record.session_id, record.player_id, record.question_id, record.answer_option_id,
+      [record.session_id, record.player_id, record.question_id, record.record_option_id || record.answer_option_id,
        record.answer_text, record.answer_numeric, record.answer_pin_x, record.answer_pin_y,
        record.is_correct, record.points_earned, record.response_time_ms]
     )
