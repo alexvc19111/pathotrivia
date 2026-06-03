@@ -131,7 +131,7 @@ export default function AdminGame() {
             <h2 style={{ fontFamily:'Syne, sans-serif', fontWeight:800, fontSize:'1.75rem', lineHeight:1.3 }}>{currentQ.question?.questionText}</h2>
             <div style={{ display:'flex', gap:'1rem', justifyContent:'center', marginTop:'1rem' }}>
               <span style={{ color:'var(--text3)', fontSize:'0.85rem' }}>{currentQ.question?.points??1000} pts</span>
-              <span style={{ color:'var(--text3)', fontSize:'0.85rem', textTransform:'capitalize' }}>·</span>
+              <span style={{ color:'var(--text3)', fontSize:'0.85rem' }}>·</span>
               <span style={{ color:'var(--text3)', fontSize:'0.85rem', textTransform:'capitalize' }}>{currentQ.question?.type?.replace(/_/g,' ')}</span>
             </div>
           </div>
@@ -154,8 +154,6 @@ export default function AdminGame() {
 
   if (phase==='results' && qStats) {
     const sortedPlayers = [...players].sort((a,b)=>b.score-a.score).slice(0,5)
-    
-    // OBTENER EL TIPO DE PREGUNTA ACTUAL
     const qType = currentQ?.question?.type
 
     return (
@@ -166,8 +164,10 @@ export default function AdminGame() {
         </div>
 
         {/* =======================================================
-            NUEVA SECCIÓN: PANEL DE SOLUCIÓN CORRECTA PARA PUZZLE
+            RENDERIZADO CONDICIONAL DE SOLUCIONES SEGÚN EL TIPO
            ======================================================= */}
+        
+        {/* CASO A: PUZZLE */}
         {qType === 'puzzle' && currentQ?.question?.options && (
           <div className="glass animate-fadeIn" style={{ borderRadius:'16px', padding:'1.5rem', width:'100%', maxWidth:'600px', border:'1px solid var(--green)' }}>
             <p style={{ fontFamily:'Syne, sans-serif', fontWeight:700, color:'var(--green)', fontSize:'0.85rem', marginBottom:'1rem', letterSpacing:'0.05em' }}>
@@ -175,31 +175,65 @@ export default function AdminGame() {
             </p>
             <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem' }}>
               {[...currentQ.question.options]
-                // Ordenamos numéricamente si existe el campo .order o .correctOrder. 
-                // Si no existe, asume que el array original del backend ya venía bien estructurado.
                 .sort((a, b) => (a.order ?? a.correctOrder ?? 0) - (b.order ?? b.correctOrder ?? 0))
                 .map((opt, idx) => (
-                  <div 
-                    key={opt.id} 
-                    style={{ 
-                      background:'var(--surface)', 
-                      padding:'0.75rem 1rem', 
-                      borderRadius:'10px', 
-                      display:'flex', 
-                      alignItems:'center', 
-                      gap:'0.75rem',
-                      border:'1px solid var(--border)'
-                    }}
-                  >
-                    <span style={{ fontFamily:'Syne, sans-serif', fontWeight:800, color:'var(--accent2)', minWidth:'24px' }}>
-                      {idx + 1}.
-                    </span>
-                    <span style={{ color:'var(--text)', fontSize:'0.95rem', fontWeight:500 }}>
-                      {opt.optionText ?? opt.option_text}
-                    </span>
+                  <div key={opt.id} style={{ background:'var(--surface)', padding:'0.75rem 1rem', borderRadius:'10px', display:'flex', alignItems:'center', gap:'0.75rem', border:'1px solid var(--border)' }}>
+                    <span style={{ fontFamily:'Syne, sans-serif', fontWeight:800, color:'var(--accent2)', minWidth:'24px' }}>{idx + 1}.</span>
+                    <span style={{ color:'var(--text)', fontSize:'0.95rem', fontWeight:500 }}>{opt.optionText ?? opt.option_text}</span>
                     <span style={{ marginLeft:'auto', color:'var(--green)' }}>✓</span>
                   </div>
                 ))}
+            </div>
+          </div>
+        )}
+
+        {/* CASO B: MATCHING (EMPAREJAMIENTO) */}
+        {qType === 'matching' && currentQ?.question?.options && (() => {
+          const opts = currentQ.question.options
+          const colA = opts.filter(o => (o.match_group ?? o.matchGroup) === 'A')
+          const colB = opts.filter(o => (o.match_group ?? o.matchGroup) === 'B')
+
+          return (
+            <div className="glass animate-fadeIn" style={{ borderRadius:'16px', padding:'1.5rem', width:'100%', maxWidth:'650px', border:'1px solid var(--green)' }}>
+              <p style={{ fontFamily:'Syne, sans-serif', fontWeight:700, color:'var(--green)', fontSize:'0.85rem', marginBottom:'1rem', letterSpacing:'0.05em' }}>
+                🔗 PAREJAS CORRECTAS RELACIONADAS
+              </p>
+              <div style={{ display:'flex', flexDirection:'column', gap:'0.6rem' }}>
+                {colA.map((itemA) => {
+                  // Encuentra la pareja correspondiente en la columna B
+                  // Busca coincidencia en match_id, pair_id o en el mismo orderIndex de creación
+                  const itemB = colB.find(b => 
+                    (b.match_id && b.match_id === itemA.match_id) || 
+                    (b.pair_id && b.pair_id === itemA.pair_id) || 
+                    (b.order === itemA.order) ||
+                    (b.correctOrder === itemA.correctOrder)
+                  )
+                  return (
+                    <div key={itemA.id} style={{ display:'grid', gridTemplateColumns:'1fr auto 1fr', alignItems:'center', gap:'1rem', background:'var(--surface)', padding:'0.75rem 1rem', borderRadius:'10px', border:'1px solid var(--border)' }}>
+                      <span style={{ color:'var(--text)', fontSize:'0.9rem', fontWeight:500, textAlign:'right' }}>{itemA.optionText ?? itemA.option_text}</span>
+                      <span style={{ color:'var(--green)', fontSize:'1.1rem', fontWeight:700 }}>⇄</span>
+                      <span style={{ color:'var(--text2)', fontSize:'0.9rem', fontWeight:500 }}>{itemB ? (itemB.optionText ?? itemB.option_text) : '⚠️ Sin par asignado'}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* CASO C: TYPE_ANSWER (RESPUESTA ESCRITA) */}
+        {qType === 'type_answer' && currentQ?.question?.options && (
+          <div className="glass animate-fadeIn" style={{ borderRadius:'16px', padding:'1.5rem', width:'100%', maxWidth:'600px', border:'1px solid var(--green)' }}>
+            <p style={{ fontFamily:'Syne, sans-serif', fontWeight:700, color:'var(--green)', fontSize:'0.85rem', marginBottom:'1rem', letterSpacing:'0.05em' }}>
+              ✏️ RESPUESTAS VALIDADAS COMO CORRECTAS
+            </p>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:'0.5rem' }}>
+              {currentQ.question.options.map((opt) => (
+                <div key={opt.id} style={{ background:'rgba(16,185,129,0.1)', border:'1px solid var(--green)', padding:'0.5rem 1rem', borderRadius:'20px', display:'flex', alignItems:'center', gap:'0.5rem' }}>
+                  <span style={{ color:'var(--text)', fontSize:'0.9rem', fontWeight:600 }}>"{opt.optionText ?? opt.option_text}"</span>
+                  <span style={{ color:'var(--green)', fontSize:'0.8rem' }}>✓</span>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -216,7 +250,6 @@ export default function AdminGame() {
           const isOpenType = ['word_cloud','brainstorm','type_answer'].includes(qType)
 
           if (isOpenType) {
-            // Nube de palabras / respuestas abiertas
             const maxCount = Math.max(...qStats.distribution.map(d => d.count), 1)
             return (
               <div className="glass animate-fadeIn" style={{ borderRadius:'16px', padding:'1.5rem', width:'100%', maxWidth:'700px' }}>
@@ -243,8 +276,8 @@ export default function AdminGame() {
             )
           }
 
-          // Tipos con opciones: barras normales (Ocultar si es puzzle para no saturar la pantalla)
-          if (qType === 'puzzle') return null
+          // Ocultar las barras gráficas si es un puzzle o emparejamiento para no sobrecargar el proyector
+          if (['puzzle', 'matching'].includes(qType)) return null
 
           return (
             <div className="glass animate-fadeIn" style={{ borderRadius:'16px', padding:'1.5rem', width:'100%', maxWidth:'600px' }}>
