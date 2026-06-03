@@ -73,9 +73,10 @@ function formatQuestionForClient(question, hideCorrect = true) {
   const options = (question.options || []).map(opt => ({
     id: opt.id,
     optionText: opt.option_text,
+    option_text: opt.option_text,   
     position: opt.position,
     matchGroup: opt.match_group,
-    // Solo enviar is_correct al admin, no a los jugadores
+    match_group: opt.match_group,   
     ...(hideCorrect ? {} : { isCorrect: opt.is_correct })
   }))
 
@@ -84,7 +85,7 @@ function formatQuestionForClient(question, hideCorrect = true) {
     type: question.type,
     questionText: question.question_text,
     timeLimitSec: question.time_limit_sec,
-    timeLimit: question.time_limit_sec, // alias para el frontend
+    timeLimit: question.time_limit_sec, 
     points: question.points,
     mediaUrl:    question.media_url,
     sliderMin:   question.slider_min,
@@ -92,7 +93,6 @@ function formatQuestionForClient(question, hideCorrect = true) {
     sliderCorrect: hideCorrect ? undefined : question.slider_correct,
     pinX:        hideCorrect ? undefined : question.pin_x,
     pinY:        hideCorrect ? undefined : question.pin_y,
-    // Explicación solo se envía cuando se revelan resultados (hideCorrect=false)
     explanation: hideCorrect ? undefined : (question.explanation || null),
     options
   }
@@ -313,16 +313,15 @@ stats.correctMatches = colA.map(left => {
 
   const players = await getPlayerScores(sessionId)
 
-  // Enviar resultados globales a todos (admin + jugadores)
-  // Incluir explanation para que el admin la muestre en pantalla grande
+  
   broadcast(sessionId, {
     type:        'QUESTION_RESULTS',
     stats,
     players,
-    explanation: game.currentQuestion?.explanation || null
+    explanation: game.currentQuestion?.explanation || null,
+    question:    formatQuestionForClient(game.currentQuestion, false) // ✨ ¡Crucial para que aparezcan las parejas!
   })
 
-  // Enviar feedback individual a cada jugador con su correcto/incorrecto y puntos
   const game2 = games.get(sessionId)
   if (game2) {
     for (const [pid, playerData] of game2.playerSockets.entries()) {
