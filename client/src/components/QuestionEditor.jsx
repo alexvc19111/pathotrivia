@@ -94,7 +94,14 @@ export default function QuestionEditor({ quizId, question = null, authHeaders, o
   const handleSave = async () => {
     if (!text.trim()) { toast.error('La pregunta no puede estar vacía'); return }
 
-    const needsOptions = ['multiple_choice', 'true_false', 'puzzle', 'matching', 'poll'].includes(type)
+    const needsOptions = [
+      'multiple_choice',
+      'true_false',
+      'puzzle',
+      'matching',
+      'poll',
+      'type_answer'
+    ].includes(type)
     const validOptions = options.filter(o => o.text.trim())
     if (needsOptions && validOptions.length === 0) {
       toast.error('Debes añadir al menos una opción válida')
