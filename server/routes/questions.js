@@ -14,27 +14,21 @@ router.get('/quizzes/:quizId/questions', async (req, res) => {
       `SELECT * FROM questions WHERE quiz_id = $1 ORDER BY position ASC, created_at ASC`,
       [quizId]
     )
-    
     const questions = questionsResult.rows
-    if (questions.length === 0) return res.json([])
-
     const questionIds = questions.map(q => q.id)
+    if (!questionIds.length) return res.json([])
+
     const optionsResult = await pool.query(
       `SELECT * FROM question_options WHERE question_id = ANY($1) ORDER BY position ASC`,
       [questionIds]
     )
-    
     const optionsByQuestion = optionsResult.rows.reduce((acc, option) => {
-      const qId = String(option.question_id)
-      if (!acc[qId]) acc[qId] = []
-      acc[qId].push(option)
+      if (!acc[option.question_id]) acc[option.question_id] = []
+      acc[option.question_id].push(option)
       return acc
     }, {})
 
-    res.json(questions.map(q => ({ 
-      ...q, 
-      question_options: optionsByQuestion[String(q.id)] || [] 
-    })))
+    res.json(questions.map(q => ({ ...q, question_options: optionsByQuestion[q.id] || [] })))
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'Error al obtener preguntas' })
