@@ -244,15 +244,25 @@ async function handleShowResults(sessionId) {
       { label: 'Orden incorrecto',  count: wrong,   pct: stats.totalAnswers ? Math.round(wrong/stats.totalAnswers*100)   : 0, isCorrect: false }
     ]
 
-  // Matching: mostrar cuántos emparejaron todo correctamente
   } else if (qType === 'matching') {
     const colA = game.currentQuestion.options.filter(o => (o.match_group ?? o.matchGroup) === 'A')
     const colB = game.currentQuestion.options.filter(o => (o.match_group ?? o.matchGroup) === 'B')
     const correctPairs = colA.reduce((acc, o) => {
       const pair = colB.find(t => Number(t.position) === Number(o.position))
-      if (pair) acc[o.id] = pair.id
-      return acc
+        if (pair) acc[o.id] = pair.id
+          return acc
     }, {})
+
+stats.correctMatches = colA.map(left => {
+  const right = colB.find(
+    r => Number(r.position) === Number(left.position)
+  )
+
+  return {
+    left: left.option_text,
+    right: right?.option_text || ''
+  }
+})
     let correct = 0
     for (const answer of answers) {
       try {
