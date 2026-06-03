@@ -140,7 +140,7 @@ export default function AdminGame() {
             <div style={{ display:'flex', gap:'1rem', justifyContent:'center', marginTop:'1rem' }}>
               <span style={{ color:'var(--text3)', fontSize:'0.85rem' }}>{currentQ.question?.points??1000} pts</span>
               <span style={{ color:'var(--text3)', fontSize:'0.85rem' }}>·</span>
-              <span style={{ color(--text3)', fontSize:'0.85rem', textTransform:'capitalize' }}>{currentQ.question?.type?.replace(/_/g,' ')}</span>
+              <span style={{ color:'var(--text3)', fontSize:'0.85rem', textTransform:'capitalize' }}>{currentQ.question?.type?.replace(/_/g,' ')}</span>
             </div>
           </div>
           {currentQ.question?.options && (
@@ -167,7 +167,7 @@ export default function AdminGame() {
     const qType = activeQuestion?.type?.toLowerCase()
     const qOptions = activeQuestion?.options
 
-    // ✨ EXTRACCIÓN ULTRA COMPATIBLE PARA TYPE_ANSWER (BÚSQUEDA MULTI-PROPIEDAD)
+    // EXTRACCIÓN ULTRA COMPATIBLE PARA TYPE_ANSWER (BÚSQUEDA MULTI-PROPIEDAD)
     let textSolutions = []
     if (qType === 'type_answer') {
       if (Array.isArray(qOptions) && qOptions.length > 0) {
