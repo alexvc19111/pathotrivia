@@ -1,7 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
-import { API_URL } from '../config'
-
 import toast from 'react-hot-toast'
 
 const QUESTION_TYPES = {
@@ -83,7 +81,13 @@ export default function QuestionEditor({ quizId, question = null, authHeaders, o
     return [...prev, { text: '', is_correct: false, position: prev.length, match_group: 'A' }]
   })
 
-  const removeOption = (idx) => setOptions(prev => prev.filter((_, i) => i !== idx))
+  const removeOption = (idx) => setOptions(prev => {
+    if (type === 'matching') {
+      const targetPos = prev[idx]?.position
+      return prev.filter(o => o.position !== targetPos)
+    }
+    return prev.filter((_, i) => i !== idx)
+  })
 
   const changeOption = (idx, field, value) => setOptions(prev => {
     const next = [...prev]
@@ -94,14 +98,7 @@ export default function QuestionEditor({ quizId, question = null, authHeaders, o
   const handleSave = async () => {
     if (!text.trim()) { toast.error('La pregunta no puede estar vacía'); return }
 
-    const needsOptions = [
-      'multiple_choice',
-      'true_false',
-      'puzzle',
-      'matching',
-      'poll',
-      'type_answer'
-    ].includes(type)
+    const needsOptions = ['multiple_choice', 'true_false', 'puzzle', 'matching', 'poll'].includes(type)
     const validOptions = options.filter(o => o.text.trim())
     if (needsOptions && validOptions.length === 0) {
       toast.error('Debes añadir al menos una opción válida')
@@ -138,7 +135,7 @@ export default function QuestionEditor({ quizId, question = null, authHeaders, o
       }
 
       const res = await fetch(
-        question ? `${API_URL}/api/questions/${question.id}` : `${API_URL}/api/quizzes/${quizId}/questions`,
+        question ? `/api/questions/${question.id}` : `/api/quizzes/${quizId}/questions`,
         { method: question ? 'PUT' : 'POST', headers: authHeaders(), body: JSON.stringify(payload) }
       )
       if (!res.ok) throw new Error((await res.json()).error || 'Error guardando pregunta')
@@ -361,8 +358,8 @@ export default function QuestionEditor({ quizId, question = null, authHeaders, o
                       </label>
                     )}
 
-                    {type !== 'true_false' && options.length > 1 && (
-                      <button onClick={() => removeOption(idx)} style={{ background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.2)', borderRadius:'8px', padding:'0.4rem 0.6rem', cursor:'pointer', color:'var(--red)', fontSize:'0.8rem' }}>
+                    {type !== 'true_false' && (type === 'matching' ? opt.match_group === 'A' && options.length > 4 : options.length > 1) && (
+                      <button onClick={() => removeOption(idx)} title={type === 'matching' ? 'Eliminar este par' : 'Eliminar opción'} style={{ background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.2)', borderRadius:'8px', padding:'0.4rem 0.6rem', cursor:'pointer', color:'var(--red)', fontSize:'0.8rem' }}>
                         🗑
                       </button>
                     )}
@@ -370,9 +367,9 @@ export default function QuestionEditor({ quizId, question = null, authHeaders, o
                 ))}
               </div>
 
-              {type !== 'true_false' && options.length < (type === 'matching' ? 8 : 4) && (
+              {type !== 'true_false' && options.length < (type === 'matching' ? 24 : 4) && (
                 <button onClick={addOption} style={{ marginTop:'0.6rem', background:'none', border:'none', color:'var(--accent)', cursor:'pointer', fontSize:'0.9rem', fontWeight:600, padding:0 }}>
-                  + Agregar opción
+                  {type === 'matching' ? `+ Agregar par (${Math.floor(options.length/2)} pares)` : '+ Agregar opción'}
                 </button>
               )}
             </div>
