@@ -17,9 +17,7 @@ import {
 
 import { CSS } from '@dnd-kit/utilities'
 
-// ==========================================
-// COMPONENTE: SortableItem (Elementos de la lista)
-// ==========================================
+
 function SortableItem({ item, index, disabled }) {
   const {
     attributes,
@@ -33,10 +31,8 @@ function SortableItem({ item, index, disabled }) {
   })
 
   const style = {
-    // 1. Usamos Translate en lugar de Transform para evitar saltos y redimensionamientos raros
     transform: CSS.Translate.toString(transform),
     
-    // 2. Desactivamos la transición CSS nativa MIENTRAS se arrastra para eliminar el lag
     transition: isDragging ? 'none' : transition,
 
     background: isDragging
@@ -56,12 +52,17 @@ function SortableItem({ item, index, disabled }) {
     alignItems: 'center',
     gap: '0.75rem',
 
+ 
     userSelect: 'none',
-    touchAction: 'none',
+    WebkitUserSelect: 'none',   // 
+    KhtmlUserSelect: 'none',
+    MozUserSelect: 'none',
+    msUserSelect: 'none',
+    WebkitTouchCallout: 'none', 
+    touchAction: 'none',        
 
     cursor: disabled ? 'default' : 'grab',
 
-    // 3. Forzamos aceleración por hardware y controlamos que la tarjeta arrastrada flote encima de todo
     willChange: 'transform',
     zIndex: isDragging ? 999 : 1,
 
@@ -77,20 +78,21 @@ function SortableItem({ item, index, disabled }) {
       {...attributes}
       {...listeners}
     >
-      {/* pointerEvents: 'none' evita que el navegador pierda el foco de arrastre al pasar sobre el texto */}
       <span
         style={{
           fontFamily: 'Syne, sans-serif',
           fontWeight: 700,
           color: 'var(--accent2)',
           minWidth: '24px',
-          pointerEvents: 'none'
+          pointerEvents: 'none',
+          userSelect: 'none',
+          WebkitUserSelect: 'none'
         }}
       >
         {index + 1}.
       </span>
 
-      <span style={{ color: 'var(--text)', pointerEvents: 'none' }}>
+      <span style={{ color: 'var(--text)', pointerEvents: 'none', userSelect: 'none', WebkitUserSelect: 'none' }}>
         {item.option_text ?? item.optionText}
       </span>
 
@@ -100,7 +102,9 @@ function SortableItem({ item, index, disabled }) {
             marginLeft: 'auto',
             color: 'var(--text3)',
             fontSize: '1.1rem',
-            pointerEvents: 'none'
+            pointerEvents: 'none',
+            userSelect: 'none',
+            WebkitUserSelect: 'none'
           }}
         >
           ⠿
@@ -110,9 +114,7 @@ function SortableItem({ item, index, disabled }) {
   )
 }
 
-// ==========================================
-// COMPONENTE PRINCIPAL: Puzzle
-// ==========================================
+
 export default function Puzzle({
   question,
   onAnswer,
@@ -121,7 +123,6 @@ export default function Puzzle({
 }) {
   const [items, setItems] = useState([])
 
-  // Mezclar las opciones aleatoriamente al cargar una nueva pregunta
   useEffect(() => {
     if (question?.options?.length) {
       const shuffled = [...question.options].sort(
@@ -131,13 +132,12 @@ export default function Puzzle({
     }
   }, [question?.id])
 
-  // 4. OPTIMIZACIÓN CRÍTICA: Usamos únicamente PointerSensor (unifica mouse y touch) 
-  // con restricciones para convivir en paz con el scroll del celular.
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        delay: 120,    // El usuario debe presionar 120ms antes de arrastrar (evita falsos arrastres al hacer scroll)
-        tolerance: 5   // Permite un margen de movimiento de 5px antes de activarse
+        delay: 120,    
+        tolerance: 5   
       }
     })
   )
