@@ -16,7 +16,6 @@ const QUESTION_TYPES = {
   matching:        'Emparejar'
 }
 
-// Helper para generar IDs locales únicos sin colisionar con DB
 const genLocalId = () => `local_${Math.random().toString(36).substr(2, 9)}`
 
 function createDefaultOptions(type) {
@@ -41,8 +40,6 @@ function createDefaultOptions(type) {
 }
 
 export default function QuestionEditor({ quizId, question = null, authHeaders, onSaved = () => {}, onCancel = () => {} }) {
-  const isFirstRender = useRef(true)
-
   // Estado maestro del formulario
   const [type, setType] = useState(question?.type || 'multiple_choice')
   const [text, setText] = useState(question?.question_text || '')
@@ -52,7 +49,6 @@ export default function QuestionEditor({ quizId, question = null, authHeaders, o
   const [explanation, setExplanation] = useState(question?.explanation || '')
   const [loading, setLoading] = useState(false)
 
-  // Estados específicos por tipos de juego
   const [sliderData, setSliderData] = useState({
     min: question?.slider_min ?? 0,
     max: question?.slider_max ?? 100,
@@ -63,11 +59,18 @@ export default function QuestionEditor({ quizId, question = null, authHeaders, o
     y: question?.pin_y ?? ''
   })
 
-  // Caché local por tipos reparado e hidratado correctamente
+  // Hidratación completa de la caché desde el inicio para evitar efectos secundarios destructivos
   const [optionsCache, setOptionsCache] = useState(() => {
     const currentType = question?.type || 'multiple_choice'
     const raw = question?.question_options ?? question?.options ?? []
     
+    // 1. Construimos el esqueleto con valores por defecto para todos los tipos posibles
+    const cache = {}
+    Object.keys(QUESTION_TYPES).forEach(t => {
+      cache[t] = createDefaultOptions(t)
+    })
+
+    // 2. Mapeamos las opciones reales que vienen de la DB
     let initialOptions = raw.map((opt, i) => ({
       id: opt.id || genLocalId(),
       text: opt.option_text ?? opt.optionText ?? opt.text ?? '',
@@ -76,17 +79,16 @@ export default function QuestionEditor({ quizId, question = null, authHeaders, o
       match_group: opt.match_group ?? opt.matchGroup ?? 'A'
     }))
 
-    // REPARACIÓN CLAVE: Si es type_answer y vino vacío de la DB, le aseguramos su nodo de texto vacío
-    if (currentType === 'type_answer' && initialOptions.length === 0) {
-      initialOptions = createDefaultOptions('type_answer')
-    } else if (initialOptions.length === 0) {
-      initialOptions = createDefaultOptions(currentType)
+    // 3. Si hay datos reales, sobreescribimos la plantilla por defecto de ese tipo específico
+    if (initialOptions.length > 0) {
+      cache[currentType] = initialOptions
+    } else if (currentType === 'type_answer') {
+      cache[currentType] = createDefaultOptions('type_answer')
     }
 
-    return { [currentType]: initialOptions }
+    return cache
   })
 
-  // El estado activo de opciones lee directamente del tipo seleccionado en la caché
   const currentOptions = useMemo(() => optionsCache[type] || [], [optionsCache, type])
 
   const setOptionsForCurrentType = (updater) => {
@@ -95,14 +97,6 @@ export default function QuestionEditor({ quizId, question = null, authHeaders, o
       return { ...prev, [type]: nextOptions }
     })
   }
-
-  // Inicializar tipos faltantes en caché al cambiar el Select
-  useEffect(() => {
-    if (isFirstRender.current) { isFirstRender.current = false; return }
-    if (!optionsCache[type]) {
-      setOptionsCache(prev => ({ ...prev, [type]: createDefaultOptions(type) }))
-    }
-  }, [type, optionsCache])
 
   const handleAddOption = () => {
     setOptionsForCurrentType(prev => {
@@ -129,7 +123,6 @@ export default function QuestionEditor({ quizId, question = null, authHeaders, o
   const handleSave = async () => {
     if (!text.trim()) return toast.error('La pregunta no puede estar vacía')
 
-    // Agregamos 'type_answer' a la validación de requerimientos mínimos
     const needsOptions = ['multiple_choice', 'true_false', 'puzzle', 'matching', 'poll', 'type_answer'].includes(type)
     const validOptions = currentOptions.filter(o => o.text.trim())
     
@@ -155,7 +148,6 @@ export default function QuestionEditor({ quizId, question = null, authHeaders, o
           pin_x: pinData.x !== '' ? Number(pinData.x) : null,
           pin_y: pinData.y !== '' ? Number(pinData.y) : null
         }),
-        // Re-estructuración del Payload enviado al Servidor
         question_options: type === 'type_answer' 
           ? [
               {
@@ -245,7 +237,7 @@ export default function QuestionEditor({ quizId, question = null, authHeaders, o
           {type === 'slider' && <SliderEditor data={sliderData} onChange={setSliderData} />}
           {type === 'drop_pin' && <DropPinEditor mediaUrl={mediaUrl} data={pinData} onChange={setPinData} />}
           
-          {/* Alertas informativas de tipos abiertos */}
+          {/* Alertas informativas */}
           {['type_answer', 'word_cloud', 'brainstorm'].includes(type) && (
             <div style={styles.infoBox}>
               {type === 'type_answer'  && '💡 Los jugadores escriben su respuesta. Puedes agregar la respuesta correcta abajo para evaluación automática.'}
@@ -425,7 +417,6 @@ function OptionsList({ type, options, onAdd, onRemove, onChange }) {
   )
 }
 
-/* --- MAPA DE ESTILOS CENTRALIZADO --- */
 const styles = {
   overlay: { position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', display:'flex', alignItems:'center', justifyContent:'center', padding:'1rem', zIndex:50 },
   modal: { width:'100%', maxWidth:'600px', maxHeight:'90vh', overflowY:'auto' },
