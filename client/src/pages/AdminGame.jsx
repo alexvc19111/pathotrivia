@@ -20,6 +20,9 @@ export default function AdminGame() {
   const timerRef = useRef(null)
   const playerUrl = sessionPin ? `${window.location.origin}/?pin=${sessionPin}` : ''
 
+  // 1. ✨ REFERENCIA PARA RESPALDAR LA PREGUNTA CON SUS OPCIONES
+  const savedQuestionRef = useRef(null)
+
   const wsUrl = sessionId
   ? buildWsUrl({
       role: 'admin',
@@ -44,6 +47,11 @@ export default function AdminGame() {
   }, [sessionId]) // eslint-disable-line
 
   useEffect(() => {
+    // 2. ✨ CAPTURAMOS LAS OPCIONES EN CALIENTE MIENTRAS ESTÉN DISPONIBLES
+    if (currentQ?.question?.options) {
+      savedQuestionRef.current = currentQ.question
+    }
+
     if (phase==='question' && currentQ) {
       setTimeLeft(currentQ.timeLimit ?? 20)
       setAnswerCount({ answered: 0, total: players.length })
@@ -62,7 +70,7 @@ export default function AdminGame() {
   if (phase==='lobby' || phase==='idle') {
     return (
       <div style={{ minHeight:'100vh', background:'var(--bg)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'2rem', position:'relative', overflow:'hidden' }}>
-        <div style={{ position:'absolute', inset:0, background:'radial-gradient(ellipse at 30% 30%, rgba(124,58,237,0.15) 0%, transparent 60%)', pointerEvents:'none' }} />
+        <div style={{ position:'absolute', inset:0, background:'radial-gradient(ellipse at 30% 30%, rgba(124,58,237,0.15) 0%, transparent 65%)', pointerEvents:'none' }} />
         <div className="animate-popIn" style={{ textAlign:'center', marginBottom:'2rem' }}>
           <p style={{ color:'var(--text3)', fontSize:'0.9rem', marginBottom:'0.5rem', fontFamily:'Syne, sans-serif' }}>PIN DE LA PARTIDA</p>
           <h1 style={{ fontFamily:'Syne, sans-serif', fontWeight:800, fontSize:'5rem', letterSpacing:'0.1em', background:'linear-gradient(135deg, var(--accent2), var(--text))', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', lineHeight:1 }}>
@@ -154,7 +162,11 @@ export default function AdminGame() {
 
   if (phase==='results' && qStats) {
     const sortedPlayers = [...players].sort((a,b)=>b.score-a.score).slice(0,5)
-    const qType = currentQ?.question?.type
+    
+    // 3. ✨ RESOLVEMOS LA PREGUNTA USANDO NUESTRA COPIA RESPALDADA EN LA REFERENCIA SI ES NECESARIO
+    const activeQuestion = currentQ?.question ?? savedQuestionRef.current
+    const qType = activeQuestion?.type
+    const qOptions = activeQuestion?.options
 
     return (
       <div style={{ minHeight:'100vh', background:'var(--bg)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'2rem', gap:'2rem' }}>
@@ -168,13 +180,13 @@ export default function AdminGame() {
            ======================================================= */}
         
         {/* CASO A: PUZZLE */}
-        {qType === 'puzzle' && currentQ?.question?.options && (
+        {qType === 'puzzle' && qOptions && (
           <div className="glass animate-fadeIn" style={{ borderRadius:'16px', padding:'1.5rem', width:'100%', maxWidth:'600px', border:'1px solid var(--green)' }}>
             <p style={{ fontFamily:'Syne, sans-serif', fontWeight:700, color:'var(--green)', fontSize:'0.85rem', marginBottom:'1rem', letterSpacing:'0.05em' }}>
               ✨ ORDEN CORRECTO DE LA SOLUCIÓN
             </p>
             <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem' }}>
-              {[...currentQ.question.options]
+              {[...qOptions]
                 .sort((a, b) => (a.order ?? a.correctOrder ?? 0) - (b.order ?? b.correctOrder ?? 0))
                 .map((opt, idx) => (
                   <div key={opt.id} style={{ background:'var(--surface)', padding:'0.75rem 1rem', borderRadius:'10px', display:'flex', alignItems:'center', gap:'0.75rem', border:'1px solid var(--border)' }}>
@@ -188,10 +200,9 @@ export default function AdminGame() {
         )}
 
         {/* CASO B: MATCHING (EMPAREJAMIENTO) */}
-        {qType === 'matching' && currentQ?.question?.options && (() => {
-          const opts = currentQ.question.options
-          const colA = opts.filter(o => (o.match_group ?? o.matchGroup) === 'A')
-          const colB = opts.filter(o => (o.match_group ?? o.matchGroup) === 'B')
+        {qType === 'matching' && qOptions && (() => {
+          const colA = qOptions.filter(o => (o.match_group ?? o.matchGroup) === 'A')
+          const colB = qOptions.filter(o => (o.match_group ?? o.matchGroup) === 'B')
 
           return (
             <div className="glass animate-fadeIn" style={{ borderRadius:'16px', padding:'1.5rem', width:'100%', maxWidth:'650px', border:'1px solid var(--green)' }}>
@@ -200,13 +211,12 @@ export default function AdminGame() {
               </p>
               <div style={{ display:'flex', flexDirection:'column', gap:'0.6rem' }}>
                 {colA.map((itemA) => {
-                  // Encuentra la pareja correspondiente en la columna B
-                  // Busca coincidencia en match_id, pair_id o en el mismo orderIndex de creación
                   const itemB = colB.find(b => 
                     (b.match_id && b.match_id === itemA.match_id) || 
                     (b.pair_id && b.pair_id === itemA.pair_id) || 
                     (b.order === itemA.order) ||
-                    (b.correctOrder === itemA.correctOrder)
+                    (b.correctOrder === itemA.correctOrder) ||
+                    (b.position !== undefined && Number(b.position) === Number(itemA.position))
                   )
                   return (
                     <div key={itemA.id} style={{ display:'grid', gridTemplateColumns:'1fr auto 1fr', alignItems:'center', gap:'1rem', background:'var(--surface)', padding:'0.75rem 1rem', borderRadius:'10px', border:'1px solid var(--border)' }}>
@@ -222,13 +232,13 @@ export default function AdminGame() {
         })()}
 
         {/* CASO C: TYPE_ANSWER (RESPUESTA ESCRITA) */}
-        {qType === 'type_answer' && currentQ?.question?.options && (
+        {qType === 'type_answer' && qOptions && (
           <div className="glass animate-fadeIn" style={{ borderRadius:'16px', padding:'1.5rem', width:'100%', maxWidth:'600px', border:'1px solid var(--green)' }}>
             <p style={{ fontFamily:'Syne, sans-serif', fontWeight:700, color:'var(--green)', fontSize:'0.85rem', marginBottom:'1rem', letterSpacing:'0.05em' }}>
               ✏️ RESPUESTAS VALIDADAS COMO CORRECTAS
             </p>
             <div style={{ display:'flex', flexWrap:'wrap', gap:'0.5rem' }}>
-              {currentQ.question.options.map((opt) => (
+              {qOptions.map((opt) => (
                 <div key={opt.id} style={{ background:'rgba(16,185,129,0.1)', border:'1px solid var(--green)', padding:'0.5rem 1rem', borderRadius:'20px', display:'flex', alignItems:'center', gap:'0.5rem' }}>
                   <span style={{ color:'var(--text)', fontSize:'0.9rem', fontWeight:600 }}>"{opt.optionText ?? opt.option_text}"</span>
                   <span style={{ color:'var(--green)', fontSize:'0.8rem' }}>✓</span>
@@ -276,7 +286,7 @@ export default function AdminGame() {
             )
           }
 
-          // Ocultar las barras gráficas si es un puzzle o emparejamiento para no sobrecargar el proyector
+          // 4. ✨ EVITAR GRÁFICAS DE BARRAS REDUNDANTES EN EMPAREJAMIENTOS/PUZZLES
           if (['puzzle', 'matching'].includes(qType)) return null
 
           return (
