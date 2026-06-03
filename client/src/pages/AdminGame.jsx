@@ -54,10 +54,25 @@ export default function AdminGame() {
       savedQuestionRef.current?.id !== currentQ.question.id
     ) {
       savedQuestionRef.current = currentQ.question
-      shuffledOptionsRef.current =
-        ['matching', 'puzzle'].includes(currentQ.question.type)
-        ? [...currentQ.question.options].sort(() => Math.random() - 0.5)
-        : currentQ.question.options
+      if (currentQ.question.type === 'matching') {
+        const colA = currentQ.question.options.filter(
+          o => (o.match_group ?? o.matchGroup ?? o.match_back) === 'A'
+        )
+        const colB = currentQ.question.options.filter(
+          o => (o.match_group ?? o.matchGroup ?? o.match_back) === 'B'
+        )
+        shuffledOptionsRef.current = [
+          ...colA.sort(() => Math.random() - 0.5),
+          ...colB.sort(() => Math.random() - 0.5)
+        ]
+      }
+      else if (currentQ.question.type === 'puzzle') {
+        shuffledOptionsRef.current =
+          [...currentQ.question.options].sort(() => Math.random() - 0.5)
+      }
+      else {
+        shuffledOptionsRef.current = currentQ.question.options
+      }
     }
 
     if (phase==='question' && currentQ) {
