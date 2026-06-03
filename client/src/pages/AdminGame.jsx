@@ -47,9 +47,13 @@ export default function AdminGame() {
   }, [sessionId]) // eslint-disable-line
 
   useEffect(() => {
-    // 2. ✨ CAPTURAMOS LAS OPCIONES EN CALIENTE MIENTRAS ESTÉN DISPONIBLES
+    console.log("Fase actual:", phase);
+    console.log("¿Qué hay en currentQ?", currentQ);
     if (currentQ?.question?.options) {
+      console.log("¡Opciones detectadas y guardadas!", currentQ.question.options);
       savedQuestionRef.current = currentQ.question
+    } else {
+      console.warn("⚠️ Advertencia: currentQ no contiene opciones en este punto.");
     }
 
     if (phase==='question' && currentQ) {
