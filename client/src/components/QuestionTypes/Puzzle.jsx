@@ -1,80 +1,228 @@
 import { useState, useEffect } from 'react'
 
-export default function Puzzle({ question, onAnswer, disabled, answered }) {
-  // Inicializar con array vacío y sincronizar cuando lleguen las opciones
-  const [order, setOrder] = useState([])
-  const [dragging, setDragging] = useState(null)
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  MouseSensor,
+  useSensor,
+  useSensors
+} from '@dnd-kit/core'
 
-  useEffect(() => {
-    if (question?.options?.length) {
-      // Mezclar el orden para que no aparezca ya ordenado
-      const shuffled = [...question.options].sort(() => Math.random() - 0.5)
-      setOrder(shuffled)
-    }
-  }, [question?.id]) // Solo re-mezclar si cambia la pregunta
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove
+} from '@dnd-kit/sortable'
 
-  const handleDragStart = (idx) => setDragging(idx)
-  const handleDragOver  = (e)   => e.preventDefault()
+import { CSS } from '@dnd-kit/utilities'
 
-  const handleDrop = (idx) => {
-    if (dragging === null || dragging === idx) return
-    const next = [...order]
-    const [item] = next.splice(dragging, 1)
-    next.splice(idx, 0, item)
-    setOrder(next)
-    setDragging(null)
-  }
+function SortableItem({ item, index, disabled }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({
+    id: item.id
+  })
 
-  const handleSubmit = () => {
-    if (!answered && order.length > 0) {
-      onAnswer(order.map(o => o.id))
-    }
-  }
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
 
-  if (!order.length) {
-    return <p style={{ color: 'var(--text3)', textAlign: 'center', padding: '1rem' }}>Cargando opciones...</p>
+    background: isDragging
+      ? 'rgba(124,58,237,0.25)'
+      : 'var(--surface2)',
+
+    border: `1px solid ${
+      isDragging
+        ? 'var(--accent)'
+        : 'var(--border)'
+    }`,
+
+    borderRadius: '12px',
+    padding: '1rem 1.25rem',
+
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.75rem',
+
+    userSelect: 'none',
+    touchAction: 'none',
+
+    cursor: disabled ? 'default' : 'grab',
+
+    boxShadow: isDragging
+      ? '0 12px 30px rgba(0,0,0,.25)'
+      : 'none'
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      <p style={{ color: 'var(--text3)', fontSize: '0.85rem', textAlign: 'center' }}>
-        Arrastra los elementos para ordenarlos correctamente
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+    >
+      <span
+        style={{
+          fontFamily: 'Syne, sans-serif',
+          fontWeight: 700,
+          color: 'var(--accent2)',
+          minWidth: '24px'
+        }}
+      >
+        {index + 1}.
+      </span>
+
+      <span style={{ color: 'var(--text)' }}>
+        {item.option_text ?? item.optionText}
+      </span>
+
+      {!disabled && (
+        <span
+          style={{
+            marginLeft: 'auto',
+            color: 'var(--text3)',
+            fontSize: '1.1rem'
+          }}
+        >
+          ⠿
+        </span>
+      )}
+    </div>
+  )
+}
+
+export default function Puzzle({
+  question,
+  onAnswer,
+  disabled,
+  answered
+}) {
+  const [items, setItems] = useState([])
+
+  useEffect(() => {
+    if (question?.options?.length) {
+      const shuffled = [...question.options].sort(
+        () => Math.random() - 0.5
+      )
+
+      setItems(shuffled)
+    }
+  }, [question?.id])
+
+  const sensors = useSensors(
+    useSensor(MouseSensor),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 100,
+        tolerance: 5
+      }
+    }),
+    useSensor(PointerSensor)
+  )
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event
+
+    if (!over || active.id === over.id) return
+
+    setItems((current) => {
+      const oldIndex = current.findIndex(
+        item => item.id === active.id
+      )
+
+      const newIndex = current.findIndex(
+        item => item.id === over.id
+      )
+
+      return arrayMove(
+        current,
+        oldIndex,
+        newIndex
+      )
+    })
+  }
+
+  const handleSubmit = () => {
+    if (answered || disabled) return
+
+    onAnswer(
+      items.map(item => item.id)
+    )
+  }
+
+  if (!items.length) {
+    return (
+      <p
+        style={{
+          color: 'var(--text3)',
+          textAlign: 'center',
+          padding: '1rem'
+        }}
+      >
+        Cargando opciones...
       </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        {order.map((opt, i) => (
+    )
+  }
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '1rem'
+      }}
+    >
+      <p
+        style={{
+          color: 'var(--text3)',
+          fontSize: '0.85rem',
+          textAlign: 'center'
+        }}
+      >
+        Mantén presionado y arrastra para ordenar
+      </p>
+
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={items.map(i => i.id)}
+          strategy={verticalListSortingStrategy}
+        >
           <div
-            key={opt.id}
-            draggable={!answered && !disabled}
-            onDragStart={() => handleDragStart(i)}
-            onDragOver={handleDragOver}
-            onDrop={() => handleDrop(i)}
             style={{
-              background: dragging === i ? 'rgba(124,58,237,0.2)' : 'var(--surface2)',
-              border: `1px solid ${dragging === i ? 'var(--accent)' : 'var(--border)'}`,
-              borderRadius: '12px',
-              padding: '1rem 1.25rem',
-              cursor: answered ? 'default' : 'grab',
-              opacity: answered ? 0.7 : 1,
-              transition: 'all 0.15s',
               display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              userSelect: 'none'
+              flexDirection: 'column',
+              gap: '0.75rem'
             }}
           >
-            <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, color: 'var(--accent2)', minWidth: '24px' }}>
-              {i + 1}.
-            </span>
-            <span style={{ color: 'var(--text)' }}>
-              {opt.option_text ?? opt.optionText}
-            </span>
-            {!answered && !disabled && (
-              <span style={{ marginLeft: 'auto', color: 'var(--text3)', fontSize: '1.1rem' }}>⠿</span>
-            )}
+            {items.map((item, index) => (
+              <SortableItem
+                key={item.id}
+                item={item}
+                index={index}
+                disabled={answered || disabled}
+              />
+            ))}
           </div>
-        ))}
-      </div>
-      <button onClick={handleSubmit} disabled={answered || disabled} className="btn-primary">
+        </SortableContext>
+      </DndContext>
+
+      <button
+        onClick={handleSubmit}
+        disabled={answered || disabled}
+        className="btn-primary"
+      >
         Confirmar orden
       </button>
     </div>
