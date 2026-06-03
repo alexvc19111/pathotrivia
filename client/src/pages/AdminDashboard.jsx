@@ -269,9 +269,7 @@ export default function AdminDashboard() {
                       <Trash2 size={14} />
                       Eliminar
                     </button>
-                    </div>
-                  )
-                })}
+                        
               </div>
             </div>
           )}
