@@ -167,23 +167,28 @@ export default function AdminGame() {
     const qType = activeQuestion?.type?.toLowerCase()
     const qOptions = activeQuestion?.options
 
-    // ✨ EXTRACCIÓN MODIFICADA CON PRIORIDAD AL CAMPO INYECTADO DESDE EL BACKEND
     let textSolutions = []
-    if (qType === 'type_answer') {
-      // 1. Prioridad absoluta: El texto correcto inyectado por el backend en las estadísticas
-      if (qStats.correctText || qStats.correct_text) {
-        textSolutions = [qStats.correctText ?? qStats.correct_text]
+    if (['type_answer', 'word_cloud', 'brainstorm'].includes(qType)) {
+      
+      const directCorrect = qStats.correctText ?? qStats.correct_text;
+      if (directCorrect) {
+        textSolutions = Array.isArray(directCorrect) ? directCorrect : [directCorrect];
       }
-      // 2. Respaldo por opciones locales si existieran
-      if (textSolutions.length === 0 && Array.isArray(qOptions) && qOptions.length > 0) {
-        textSolutions = qOptions.map(o => o.optionText ?? o.option_text ?? o.text).filter(Boolean)
+      
+      if (textSolutions.length === 0 && Array.isArray(qOptions)) {
+        const correctOpts = qOptions.filter(o => o.isCorrect === true || o.is_correct === true || qType === 'type_answer');
+        textSolutions = correctOpts.map(o => o.optionText ?? o.option_text ?? o.text ?? o.answer).filter(Boolean);
       } 
-      // 3. Respaldo por distribución si viene marcado como correcto
+      
       if (textSolutions.length === 0 && Array.isArray(qStats?.distribution)) {
         textSolutions = qStats.distribution
           .filter(d => d.isCorrect === true || d.is_correct === true)
           .map(d => d.label)
           .filter(Boolean)
+      }
+      
+      if (textSolutions.length === 0 && activeQuestion?.correctAnswer) {
+        textSolutions = [activeQuestion.correctAnswer];
       }
     }
 
