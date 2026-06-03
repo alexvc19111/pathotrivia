@@ -20,7 +20,7 @@ export default function AdminGame() {
   const timerRef = useRef(null)
   const playerUrl = sessionPin ? `${window.location.origin}/?pin=${sessionPin}` : ''
 
-  // ✨ REFERENCIA PARA RESPALDAR LA PREGUNTA CON SUS OPCIONES DURANTE LA FASE 'QUESTION'
+  // REFERENCIA PARA RESPALDAR LA PREGUNTA CON SUS OPCIONES DURANTE LA FASE 'QUESTION'
   const savedQuestionRef = useRef(null)
 
   const wsUrl = sessionId
@@ -47,8 +47,8 @@ export default function AdminGame() {
   }, [sessionId]) // eslint-disable-line
 
   useEffect(() => {
-    // ✨ CAPTURAMOS LAS OPCIONES EN CALIENTE MIENTRAS ESTÉN DISPONIBLES EN EL WebSocket
-    if (currentQ?.question?.options) {
+    // CAPTURAMOS LAS OPCIONES EN CALIENTE MIENTRAS ESTÉN DISPONIBLES EN EL WebSocket
+    if (currentQ?.question) {
       savedQuestionRef.current = currentQ.question
     }
 
@@ -140,7 +140,7 @@ export default function AdminGame() {
             <div style={{ display:'flex', gap:'1rem', justifyContent:'center', marginTop:'1rem' }}>
               <span style={{ color:'var(--text3)', fontSize:'0.85rem' }}>{currentQ.question?.points??1000} pts</span>
               <span style={{ color:'var(--text3)', fontSize:'0.85rem' }}>·</span>
-              <span style={{ color:'var(--text3)', fontSize:'0.85rem', textTransform:'capitalize' }}>{currentQ.question?.type?.replace(/_/g,' ')}</span>
+              <span style={{ color(--text3)', fontSize:'0.85rem', textTransform:'capitalize' }}>{currentQ.question?.type?.replace(/_/g,' ')}</span>
             </div>
           </div>
           {currentQ.question?.options && (
@@ -163,10 +163,28 @@ export default function AdminGame() {
   if (phase==='results' && qStats) {
     const sortedPlayers = [...players].sort((a,b)=>b.score-a.score).slice(0,5)
     
-    // ✨ RECUPERACIÓN INTELIGENTE DE LA PREGUNTA ACTIVA
     const activeQuestion = currentQ?.question ?? savedQuestionRef.current
     const qType = activeQuestion?.type?.toLowerCase()
     const qOptions = activeQuestion?.options
+
+    // ✨ EXTRACCIÓN ULTRA COMPATIBLE PARA TYPE_ANSWER (BÚSQUEDA MULTI-PROPIEDAD)
+    let textSolutions = []
+    if (qType === 'type_answer') {
+      if (Array.isArray(qOptions) && qOptions.length > 0) {
+        textSolutions = qOptions.map(o => o.optionText ?? o.option_text ?? o.text ?? o.accepted_text ?? o.value).filter(Boolean)
+      } 
+      // Si no viene en options, rastreamos las propiedades directas del objeto question
+      if (textSolutions.length === 0 && activeQuestion) {
+        const directValue = activeQuestion.correctAnswer ?? activeQuestion.correct_answer ?? activeQuestion.acceptedAnswers ?? activeQuestion.accepted_answers ?? activeQuestion.answer ?? activeQuestion.text
+        if (directValue) {
+          textSolutions = Array.isArray(directValue) ? directValue : [directValue]
+        }
+      }
+      // Si sigue vacío, extraemos las etiquetas marcadas como correctas desde la distribución de qStats
+      if (textSolutions.length === 0 && Array.isArray(qStats.distribution)) {
+        textSolutions = qStats.distribution.filter(d => d.isCorrect === true).map(d => d.label).filter(Boolean)
+      }
+    }
 
     return (
       <div style={{ minHeight:'100vh', background:'var(--bg)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'2rem', gap:'2rem' }}>
@@ -201,7 +219,6 @@ export default function AdminGame() {
 
         {/* CASO B: MATCHING (EMPAREJAMIENTO) */}
         {qType === 'matching' && qOptions && (() => {
-          // Filtrado robusto tolerando múltiples estructuras de datos de columnas
           const colA = qOptions.filter(o => (o.match_group ?? o.matchGroup ?? o.match_back) === 'A')
           const colB = qOptions.filter(o => (o.match_group ?? o.matchGroup ?? o.match_back) === 'B')
 
@@ -212,7 +229,6 @@ export default function AdminGame() {
               </p>
               <div style={{ display:'flex', flexDirection:'column', gap:'0.6rem' }}>
                 {colA.map((itemA) => {
-                  // Buscador estricto que enlaza por IDs relacionales o por índices de posición en espejo
                   const itemB = colB.find(b => {
                     if (itemA.match_id && b.match_id === itemA.match_id) return true;
                     if (itemA.matchId && b.matchId === itemA.matchId) return true;
@@ -239,23 +255,19 @@ export default function AdminGame() {
           )
         })()}
 
-        {/* CASO C: TYPE_ANSWER (RESPUESTA ESCRITA) */}
-        {qType === 'type_answer' && qOptions && (
+        {/* CASO C: TYPE_ANSWER (RESPUESTA ESCRITA BLINDADA) */}
+        {qType === 'type_answer' && textSolutions.length > 0 && (
           <div className="glass animate-fadeIn" style={{ borderRadius:'16px', padding:'1.5rem', width:'100%', maxWidth:'600px', border:'1px solid var(--green)' }}>
             <p style={{ fontFamily:'Syne, sans-serif', fontWeight:700, color:'var(--green)', fontSize:'0.85rem', marginBottom:'1rem', letterSpacing:'0.05em' }}>
               ✏️ RESPUESTAS VALIDADAS COMO CORRECTAS
             </p>
-            <div style={{ display:'flex', flexWrap:'wrap', gap:'0.5rem' }}>
-              {qOptions.map((opt) => {
-                const displayText = opt.optionText ?? opt.option_text ?? opt.text ?? opt.accepted_text ?? opt.value;
-                if (!displayText) return null;
-                return (
-                  <div key={opt.id} style={{ background:'rgba(16,185,129,0.1)', border:'1px solid var(--green)', padding:'0.5rem 1rem', borderRadius:'20px', display:'flex', alignItems:'center', gap:'0.5rem' }}>
-                    <span style={{ color:'var(--text)', fontSize:'0.9rem', fontWeight:600 }}>"{displayText}"</span>
-                    <span style={{ color:'var(--green)', fontSize:'0.8rem' }}>✓</span>
-                  </div>
-                )
-              })}
+            <div style={{ display:'flex', flexWrap:'wrap', gap:'0.5rem', justifyContent:'center' }}>
+              {textSolutions.map((text, idx) => (
+                <div key={idx} style={{ background:'rgba(16,185,129,0.1)', border:'1px solid var(--green)', padding:'0.5rem 1rem', borderRadius:'20px', display:'flex', alignItems:'center', gap:'0.5rem' }}>
+                  <span style={{ color:'var(--text)', fontSize:'0.95rem', fontWeight:600 }}>"{text}"</span>
+                  <span style={{ color:'var(--green)', fontSize:'0.8rem' }}>✓</span>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -268,6 +280,7 @@ export default function AdminGame() {
           </div>
         )}
 
+        {/* DISTRIBUCIÓN DE RESPUESTAS */}
         {qStats.distribution && qStats.distribution.length > 0 && (() => {
           const isOpenType = ['word_cloud','brainstorm','type_answer'].includes(qType)
 
@@ -298,9 +311,6 @@ export default function AdminGame() {
             )
           }
 
-          // Escondemos gráficas redundantes para no solapar los paneles estilizados superiores
-          if (['puzzle', 'matching'].includes(qType)) return null
-
           return (
             <div className="glass animate-fadeIn" style={{ borderRadius:'16px', padding:'1.5rem', width:'100%', maxWidth:'600px' }}>
               <p style={{ fontFamily:'Syne, sans-serif', fontWeight:600, color:'var(--text2)', fontSize:'0.85rem', marginBottom:'1rem' }}>DISTRIBUCIÓN DE RESPUESTAS</p>
@@ -319,6 +329,7 @@ export default function AdminGame() {
           )
         })()}
 
+        {/* SECCIÓN DE CLASIFICACIÓN / RANKING */}
         <div className="glass animate-fadeIn" style={{ borderRadius:'16px', padding:'1.5rem', width:'100%', maxWidth:'600px' }}>
           <p style={{ fontFamily:'Syne, sans-serif', fontWeight:600, color:'var(--text2)', fontSize:'0.85rem', marginBottom:'1rem' }}>CLASIFICACIÓN</p>
           {sortedPlayers.map((p,i) => (
