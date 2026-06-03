@@ -167,23 +167,48 @@ export default function AdminGame() {
     const qType = activeQuestion?.type?.toLowerCase()
     const qOptions = activeQuestion?.options
 
-    // EXTRACCIÓN ULTRA COMPATIBLE PARA TYPE_ANSWER (BÚSQUEDA MULTI-PROPIEDAD)
+    // 🔍 EXTRACCIÓN ULTRA COMPATIBLE CON LOGS PARA DEPURACIÓN
     let textSolutions = []
     if (qType === 'type_answer') {
+      console.log('--- DEPURACIÓN TYPE_ANSWER ---')
+      console.log('activeQuestion:', activeQuestion)
+      console.log('qStats:', qStats)
+
+      // 1. Intento estándar por opciones
       if (Array.isArray(qOptions) && qOptions.length > 0) {
         textSolutions = qOptions.map(o => o.optionText ?? o.option_text ?? o.text ?? o.accepted_text ?? o.value).filter(Boolean)
       } 
-      // Si no viene en options, rastreamos las propiedades directas del objeto question
+      
+      // 2. Propiedades directas de la pregunta (Ampliadas)
       if (textSolutions.length === 0 && activeQuestion) {
-        const directValue = activeQuestion.correctAnswer ?? activeQuestion.correct_answer ?? activeQuestion.acceptedAnswers ?? activeQuestion.accepted_answers ?? activeQuestion.answer ?? activeQuestion.text
+        const directValue = activeQuestion.correctAnswer ?? 
+                            activeQuestion.correct_answer ?? 
+                            activeQuestion.acceptedAnswers ?? 
+                            activeQuestion.accepted_answers ?? 
+                            activeQuestion.answer ?? 
+                            activeQuestion.answers ?? 
+                            activeQuestion.text
         if (directValue) {
           textSolutions = Array.isArray(directValue) ? directValue : [directValue]
         }
       }
-      // Si sigue vacío, extraemos las etiquetas marcadas como correctas desde la distribución de qStats
-      if (textSolutions.length === 0 && Array.isArray(qStats.distribution)) {
-        textSolutions = qStats.distribution.filter(d => d.isCorrect === true).map(d => d.label).filter(Boolean)
+
+      // 3. Buscar en las estadísticas de distribución por si el backend mandó el flag 'isCorrect' ahí
+      if (textSolutions.length === 0 && Array.isArray(qStats?.distribution)) {
+        textSolutions = qStats.distribution
+          .filter(d => d.isCorrect === true || d.is_correct === true || d.correct === true)
+          .map(d => d.label ?? d.text)
+          .filter(Boolean)
       }
+
+      // 4. SALVAVIDAS EXTREMO: Si hay distribución de respuestas de los alumnos y el contenedor está vacío,
+      // usará esas respuestas de la distribución para que el recuadro nunca se quede invisible.
+      if (textSolutions.length === 0 && Array.isArray(qStats?.distribution)) {
+        textSolutions = qStats.distribution.map(d => d.label).filter(Boolean)
+      }
+      
+      console.log('Soluciones finales extraídas:', textSolutions)
+      console.log('------------------------------')
     }
 
     return (
