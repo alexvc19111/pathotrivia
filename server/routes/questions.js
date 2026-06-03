@@ -66,10 +66,14 @@ router.post('/quizzes/:quizId/questions', async (req, res) => {
       for (let i = 0; i < question_options.length; i++) {
         const opt = question_options[i]
         if (!opt.option_text) continue
+        
+        // El tipo 'type_answer' fuerza que las opciones guardadas sean respuestas correctas válidas
+        const finalIsCorrect = type === 'type_answer' ? true : !!opt.is_correct
+
         await pool.query(
           `INSERT INTO question_options (question_id, option_text, is_correct, position, match_group)
            VALUES ($1,$2,$3,$4,$5)`,
-          [questionId, opt.option_text, !!opt.is_correct, opt.position ?? i, opt.match_group || null]
+          [questionId, opt.option_text, finalIsCorrect, opt.position ?? i, opt.match_group || null]
         )
       }
     }
@@ -141,18 +145,22 @@ router.put('/questions/:id', async (req, res) => {
       for (let i = 0; i < question_options.length; i++) {
         const opt = question_options[i]
         if (!opt.option_text) continue
+
+        // El tipo 'type_answer' fuerza que las opciones guardadas sean respuestas correctas válidas
+        const finalIsCorrect = type === 'type_answer' ? true : !!opt.is_correct
+
         if (opt.id) {
           await client.query(
             `UPDATE question_options
              SET option_text = $1, is_correct = $2, position = $3, match_group = $4
              WHERE id = $5 AND question_id = $6`,
-            [opt.option_text, !!opt.is_correct, opt.position ?? i, opt.match_group || null, opt.id, id]
+            [opt.option_text, finalIsCorrect, opt.position ?? i, opt.match_group || null, opt.id, id]
           )
         } else {
           await client.query(
             `INSERT INTO question_options (question_id, option_text, is_correct, position, match_group)
              VALUES ($1,$2,$3,$4,$5)`,
-            [id, opt.option_text, !!opt.is_correct, opt.position ?? i, opt.match_group || null]
+            [id, opt.option_text, finalIsCorrect, opt.position ?? i, opt.match_group || null]
           )
         }
       }
