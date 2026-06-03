@@ -22,6 +22,7 @@ export default function AdminGame() {
 
   // REFERENCIA PARA RESPALDAR LA PREGUNTA CON SUS OPCIONES DURANTE LA FASE 'QUESTION'
   const savedQuestionRef = useRef(null)
+  const shuffledOptionsRef = useRef([])
 
   const wsUrl = sessionId
   ? buildWsUrl({
@@ -48,8 +49,15 @@ export default function AdminGame() {
 
   useEffect(() => {
     // CAPTURAMOS LAS OPCIONES EN CALIENTE MIENTRAS ESTÉN DISPONIBLES EN EL WebSocket
-    if (currentQ?.question) {
+    if (
+      currentQ?.question &&
+      savedQuestionRef.current?.id !== currentQ.question.id
+    ) {
       savedQuestionRef.current = currentQ.question
+      shuffledOptionsRef.current =
+        ['matching', 'puzzle'].includes(currentQ.question.type)
+        ? [...currentQ.question.options].sort(() => Math.random() - 0.5)
+        : currentQ.question.options
     }
 
     if (phase==='question' && currentQ) {
@@ -145,7 +153,7 @@ export default function AdminGame() {
           </div>
           {currentQ.question?.options && !['type_answer','word_cloud','brainstorm'].includes(currentQ.question?.type) && (
             <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:'0.75rem', width:'100%', maxWidth:'700px' }}>
-              {currentQ.question.options.map((opt, i) => (
+              {shuffledOptionsRef.current.map((opt, i) => (
                 <div key={opt.id} style={{ background:ANSWER_COLORS[i%4], borderRadius:'14px', padding:'0.875rem 1.25rem', display:'flex', alignItems:'center', gap:'0.75rem' }}>
                   <span style={{ fontSize:'1.1rem', color:'white' }}>{ANSWER_ICONS[i%4]}</span>
                   <span style={{ color:'white', fontFamily:'Syne, sans-serif', fontWeight:600, fontSize:'0.95rem' }}>{opt.optionText}</span>
