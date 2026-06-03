@@ -15,7 +15,9 @@ import {
   SlidersHorizontal,
   Lightbulb,
   MapPin,
-  GitCompare
+  GitCompare,
+  Pencil,
+  Trash2
 } from 'lucide-react'
 
 const QUESTION_TYPES = [
@@ -255,13 +257,16 @@ export default function AdminDashboard() {
                       <div style={{ display:'flex', gap:'0.5rem', flexShrink:0 }}>
                         <button
                           onClick={() => openEditor(q)}
-                          style={{ background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:'8px', padding:'0.4rem 0.75rem', cursor:'pointer', color:'var(--text2)', fontSize:'0.8rem' }}
-                        >✏️ Editar</button>
-                        <button
+                          style={{ display: 'flex', alignItems:'center', gap:'0.4rem', background:'rgba(59,130,246,0.12)', border:'1px solid rgba(59,130,246,0.25)', borderRadius:'8px', padding:'0.4rem 0.75rem', cursor:'pointer', color:'#3b82f6', fontSize:'0.8rem',fontWeight:600 }}
+                        <Pencil size={14} />
+                        Editar
+                      </button>
                           onClick={() => deleteQuestion(q.id)}
-                          style={{ background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.2)', borderRadius:'8px', padding:'0.4rem 0.75rem', cursor:'pointer', color:'var(--red)', fontSize:'0.8rem' }}
-                        >🗑</button>
-                      </div>
+                          style={{display:'flex', alignItems:'center', gap:'0.4rem', background:'rgba(239,68,68,0.12)', border:'1px solid rgba(239,68,68,0.25)', borderRadius:'8px', padding:'0.4rem 0.75rem', cursor:'pointer', color:'#ef4444', fontSize:'0.8rem', fontWeight:600 }}
+                        >
+                      <Trash2 size={14} />
+                      Eliminar
+                    </button>
                     </div>
                   )
                 })}
