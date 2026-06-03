@@ -5,18 +5,30 @@ import { APP_URL } from '../config'
 import toast from 'react-hot-toast'
 import QuestionEditor from '../components/QuestionEditor.jsx'
 import PDFImporter from '../components/PDFImporter.jsx'
+import {
+  HelpCircle,
+  CheckCircle2,
+  Keyboard,
+  Puzzle,
+  BarChart3,
+  Cloud,
+  SlidersHorizontal,
+  Lightbulb,
+  MapPin,
+  GitCompare
+} from 'lucide-react'
 
 const QUESTION_TYPES = [
-  { id: 'multiple_choice', icon: '🔵', label: 'Opción múltiple' },
-  { id: 'true_false',      icon: '✅', label: 'Verdadero / Falso' },
-  { id: 'type_answer',     icon: '⌨️',  label: 'Escribir respuesta' },
-  { id: 'puzzle',          icon: '🧩', label: 'Puzzle (ordenar)' },
-  { id: 'poll',            icon: '📊', label: 'Encuesta' },
-  { id: 'word_cloud',      icon: '☁️',  label: 'Nube de palabras' },
-  { id: 'slider',          icon: '🎚️', label: 'Deslizador numérico' },
-  { id: 'brainstorm',      icon: '💡', label: 'Brainstorm' },
-  { id: 'drop_pin',        icon: '📍', label: 'Señalar en imagen' },
-  { id: 'matching',        icon: '🔗', label: 'Emparejar' },
+  { id: 'multiple_choice', icon: HelpCircle, label: 'Opción múltiple' },
+  { id: 'true_false', icon: CheckCircle2, label: 'Verdadero / Falso' },
+  { id: 'type_answer', icon: Keyboard, label: 'Escribir respuesta' },
+  { id: 'puzzle', icon: Puzzle, label: 'Puzzle (ordenar)' },
+  { id: 'poll', icon: BarChart3, label: 'Encuesta' },
+  { id: 'word_cloud', icon: Cloud, label: 'Nube de palabras' },
+  { id: 'slider', icon: SlidersHorizontal, label: 'Deslizador numérico' },
+  { id: 'brainstorm', icon: Lightbulb, label: 'Brainstorm' },
+  { id: 'drop_pin', icon: MapPin, label: 'Señalar en imagen' },
+  { id: 'matching', icon: GitCompare, label: 'Emparejar' }
 ]
 
 export default function AdminDashboard() {
@@ -227,10 +239,11 @@ export default function AdminDashboard() {
 
               <div style={{ display:'flex', flexDirection:'column', gap:'0.75rem' }}>
                 {questions.map((q, i) => {
-                  const typeInfo = QUESTION_TYPES.find(t => t.id === q.type)
+              const typeInfo = QUESTION_TYPES.find(t => t.id === q.type)
+                const Icon = typeInfo?.icon
                   return (
                     <div key={q.id} className="animate-slideIn" style={{ animationDelay:`${i*0.04}s`, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'14px', padding:'1rem 1.25rem', display:'flex', alignItems:'center', gap:'1rem' }}>
-                      <div style={{ width:'36px', height:'36px', borderRadius:'10px', background:'var(--surface2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1.1rem', flexShrink:0 }}>{typeInfo?.icon ?? '❓'}</div>
+                      <div style={{ width:'36px', height:'36px', borderRadius:'10px', background:'var(--surface2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1.1rem', flexShrink:0 }}>{Icon ? (<Icon size={18} strokeWidth={2} />) : (<HelpCircle size={18} strokeWidth={2} />)}</div>
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', marginBottom:'0.2rem' }}>
                           <span style={{ fontSize:'0.75rem', color:'var(--text3)', fontWeight:500 }}>#{i+1}</span>
