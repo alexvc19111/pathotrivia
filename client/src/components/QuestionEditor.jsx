@@ -291,4 +291,160 @@ export default function QuestionEditor({ quizId, question = null, authHeaders, o
   )
 }
 
-/* El resto de subcomponentes aislados y estilos quedan exactamente iguales... */
+function SliderEditor({ data, onChange }) {
+  const handleUpdate = (field, value) => onChange(prev => ({ ...prev, [field]: value }))
+  return (
+    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1rem' }}>
+      <div>
+        <label style={styles.label}>Valor mínimo</label>
+        <input type="number" value={data.min} onChange={e => handleUpdate('min', e.target.value)} className="input-field" />
+      </div>
+      <div>
+        <label style={styles.label}>Valor máximo</label>
+        <input type="number" value={data.max} onChange={e => handleUpdate('max', e.target.value)} className="input-field" />
+      </div>
+      <div style={{ gridColumn:'1/-1' }}>
+        <label style={styles.label}>Valor correcto</label>
+        <input type="number" value={data.correct} onChange={e => handleUpdate('correct', e.target.value)} className="input-field" 
+          placeholder={`Entre ${data.min} y ${data.max}`} min={data.min} max={data.max} />
+      </div>
+    </div>
+  )
+}
+
+function DropPinEditor({ mediaUrl, data, onChange }) {
+  if (!mediaUrl) {
+    return (
+      <div style={styles.pinEmptyState}>
+        📷 Agrega una URL de imagen arriba para poder marcar el punto
+      </div>
+    )
+  }
+
+  const handleImageClick = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = ((e.clientX - rect.left) / rect.width * 100).toFixed(1)
+    const y = ((e.clientY - rect.top)  / rect.height * 100).toFixed(1)
+    onChange({ x, y })
+  }
+
+  return (
+    <div>
+      <p style={{ color:'var(--text3)', fontSize:'0.85rem', marginBottom:'0.75rem' }}>
+        Haz clic en la imagen para definir el punto correcto. También puedes ajustar las coordenadas manualmente.
+      </p>
+      <div style={styles.pinArea} onClick={handleImageClick}>
+        <img src={mediaUrl} alt="Marcar destino" style={styles.pinImg} draggable={false} />
+        {data.x !== '' && data.y !== '' && (
+          <>
+            <div style={{ ...styles.pinCrosshair, left:`${data.x}%`, top:`${data.y}%` }}>
+              <div style={styles.crosshairH} />
+              <div style={styles.crosshairV} />
+            </div>
+            <div style={{ ...styles.pinBubble, left:`${data.x}%`, top:`${data.y}%` }} />
+            <div style={{ ...styles.pinTolerance, left:`${data.x}%`, top:`${data.y}%` }} />
+          </</>
+        )}
+        <p style={styles.pinImgBadge}>Haz clic para marcar el punto correcto</p>
+      </div>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1rem' }}>
+        <div>
+          <label style={styles.label}>X ({data.x !== '' ? data.x+'%' : '—'})</label>
+          <input type="number" value={data.x} onChange={e => onChange(p => ({ ...p, x: e.target.value }))} className="input-field" min="0" max="100" step="0.1" />
+        </div>
+        <div>
+          <label style={styles.label}>Y ({data.y !== '' ? data.y+'%' : '—'})</label>
+          <input type="number" value={data.y} onChange={e => onChange(p => ({ ...p, y: e.target.value }))} className="input-field" min="0" max="100" step="0.1" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function OptionsList({ type, options, onAdd, onRemove, onChange }) {
+  const title = type === 'matching' ? 'Pares para emparejar' : type === 'puzzle' ? 'Elementos en orden correcto' : 'Opciones de respuesta'
+  const maxLimit = type === 'matching' ? 8 : 4
+
+  return (
+    <div>
+      <label style={styles.label}>{title}</label>
+      {type === 'matching' && (
+        <p style={{ fontSize:'0.8rem', color:'var(--text3)', marginBottom:'0.5rem' }}>
+          Asigna cada elemento a Columna A o Columna B. Los pares con la misma posición coinciden correctamente.
+        </p>
+      )}
+
+      <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem' }}>
+        {options.map((opt, idx) => (
+          <div key={opt.id} style={{ display:'flex', gap:'0.5rem', alignItems:'center' }}>
+            <input
+              type="text"
+              value={opt.text}
+              onChange={e => onChange(opt.id, 'text', e.target.value)}
+              className="input-field"
+              placeholder={type === 'true_false' ? '' : type === 'matching' ? `Elemento ${idx + 1}` : `Opción ${idx + 1}`}
+              style={{ flex:1, fontSize:'0.9rem' }}
+              disabled={type === 'true_false'}
+            />
+
+            {type === 'matching' && (
+              <div style={{ display:'flex', alignItems:'center', gap:'0.4rem', flexShrink:0 }}>
+                <span style={{ fontSize:'0.8rem', color: opt.match_group==='A' ? 'var(--accent2)' : 'var(--green)', fontWeight:700, minWidth:'16px' }}>
+                  {opt.match_group}
+                </span>
+                <span style={styles.matchBadge}>
+                  Par {(opt.position ?? 0) + 1}
+                </span>
+              </div>
+            )}
+
+            {['multiple_choice', 'true_false', 'poll'].includes(type) && (
+              <label style={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  checked={!!opt.is_correct}
+                  onChange={e => onChange(opt.id, 'is_correct', e.target.checked)}
+                  style={{ accentColor:'var(--accent)', width:'16px', height:'16px' }}
+                  disabled={type === 'poll'}
+                />
+                <span style={{ color: opt.is_correct ? 'var(--green)' : 'var(--text3)' }}>✓</span>
+              </label>
+            )}
+
+            {type !== 'true_false' && options.length > 1 && (
+              <button onClick={() => onRemove(opt.id)} style={styles.removeBtn}>🗑</button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {type !== 'true_false' && options.length < maxLimit && (
+        <button onClick={onAdd} style={styles.addBtn}>+ Agregar opción</button>
+      )}
+    </div>
+  )
+}
+
+/* --- MAPA DE ESTILOS CENTRALIZADO --- */
+const styles = {
+  overlay: { position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', display:'flex', alignItems:'center', justifyContent:'center', padding:'1rem', zIndex:50 },
+  modal: { width:'100%', maxWidth:'600px', maxHeight:'90vh', overflowY:'auto' },
+  header: { display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1.5rem' },
+  closeBtn: { background:'none', border:'none', cursor:'pointer', color:'var(--text3)' },
+  label: { display:'block', fontSize:'0.85rem', fontWeight:600, color:'var(--text2)', marginBottom:'0.5rem' },
+  mediaPreview: { marginTop:'0.5rem', maxHeight:'120px', borderRadius:'8px', objectFit:'cover' },
+  infoBox: { background:'rgba(124,58,237,0.08)', border:'1px solid rgba(124,58,237,0.2)', borderRadius:'10px', padding:'0.875rem', fontSize:'0.85rem', color:'var(--text2)' },
+  pinEmptyState: { border:'2px dashed var(--border)', borderRadius:'12px', padding:'2rem', textAlign:'center', color:'var(--text3)', fontSize:'0.85rem', marginBottom:'1rem' },
+  pinArea: { position:'relative', marginBottom:'1rem', cursor:'crosshair', userSelect:'none' },
+  pinImg: { width:'100%', maxHeight:'320px', objectFit:'contain', borderRadius:'12px', border:'2px solid var(--accent)', display:'block' },
+  pinImgBadge: { position:'absolute', bottom:'8px', right:'8px', background:'rgba(0,0,0,0.6)', color:'white', fontSize:'0.75rem', padding:'0.25rem 0.5rem', borderRadius:'6px', margin:0 },
+  pinCrosshair: { position:'absolute', transform:'translate(-50%,-50%)', pointerEvents:'none' },
+  crosshairH: { width:'30px', height:'2px', background:'rgba(255,255,255,0.6)', position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)' },
+  crosshairV: { width:'2px', height:'30px', background:'rgba(255,255,255,0.6)', position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)' },
+  pinBubble: { position:'absolute', transform:'translate(-50%,-50%)', width:'20px', height:'20px', background:'var(--accent2)', border:'3px solid white', borderRadius:'50%', boxShadow:'0 2px 8px rgba(0,0,0,0.5)', pointerEvents:'none' },
+  pinTolerance: { position:'absolute', transform:'translate(-50%,-50%)', width:'20%', height:'0', paddingBottom:'20%', border:'2px dashed rgba(168,85,247,0.6)', borderRadius:'50%', pointerEvents:'none', background:'rgba(168,85,247,0.05)' },
+  matchBadge: { fontSize:'0.72rem', color:'var(--text3)', background:'var(--surface2)', padding:'0.15rem 0.5rem', borderRadius:'6px', whiteSpace:'nowrap' },
+  checkboxLabel: { display:'flex', alignItems:'center', gap:'0.4rem', fontSize:'0.85rem', whiteSpace:'nowrap', cursor:'pointer' },
+  removeBtn: { background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.2)', borderRadius:'8px', padding:'0.4rem 0.6rem', cursor:'pointer', color:'var(--red)', fontSize:'0.8rem' },
+  addBtn: { marginTop:'0.6rem', background:'none', border:'none', color:'var(--accent)', cursor:'pointer', fontSize:'0.9rem', fontWeight:600, padding:0 }
+}
