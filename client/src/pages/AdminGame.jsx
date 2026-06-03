@@ -143,13 +143,12 @@ export default function AdminGame() {
               <span style={{ color:'var(--text3)', fontSize:'0.85rem', textTransform:'capitalize' }}>{currentQ.question?.type?.replace(/_/g,' ')}</span>
             </div>
           </div>
-          {currentQ.question?.options && currentQ.question?.type !== 'type_answer' && (
+          {currentQ.question?.options && !['type_answer','word_cloud','brainstorm'].includes(currentQ.question?.type) && (
             <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:'0.75rem', width:'100%', maxWidth:'700px' }}>
               {currentQ.question.options.map((opt, i) => (
                 <div key={opt.id} style={{ background:ANSWER_COLORS[i%4], borderRadius:'14px', padding:'0.875rem 1.25rem', display:'flex', alignItems:'center', gap:'0.75rem' }}>
                   <span style={{ fontSize:'1.1rem', color:'white' }}>{ANSWER_ICONS[i%4]}</span>
                   <span style={{ color:'white', fontFamily:'Syne, sans-serif', fontWeight:600, fontSize:'0.95rem' }}>{opt.optionText}</span>
-                  {opt.isCorrect && <span style={{ marginLeft:'auto' }}>✓</span>}
                 </div>
               ))}
             </div>
@@ -367,9 +366,21 @@ export default function AdminGame() {
           {order.map(rank => {
             const player=top3[rank]
             if(!player) return <div key={rank} style={{ width:'160px' }} />
-            const heights=['200px','260px','170px']
-            const medals=['🥈','🥇','🥉']
-            const bgColors=['rgba(209,213,219,0.15)','rgba(251,191,36,0.2)','rgba(205,124,47,0.15)']
+              const heights = {
+                0: '260px', // 1er lugar
+                1: '200px', // 2do lugar
+                2: '170px'  // 3er lugar
+                }
+              const medals = {
+                0: '🥇',
+                1: '🥈',
+                2: '🥉'
+              }
+                const bgColors = {
+                  0: 'rgba(251,191,36,0.2)',
+                  1: 'rgba(209,213,219,0.15)',
+                  2: 'rgba(205,124,47,0.15)'
+                }
             return (
               <div key={rank} className="animate-popIn" style={{ animationDelay:`${rank*0.2}s`, textAlign:'center', width:'160px' }}>
                 <div style={{ fontSize:'2.5rem', marginBottom:'0.5rem' }}>{player.avatar??'🎮'}</div>
