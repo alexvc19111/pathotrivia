@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { API_URL } from '../config'
 
 const QUESTION_TYPES = {
   multiple_choice: 'Opción múltiple',
@@ -135,7 +136,7 @@ export default function QuestionEditor({ quizId, question = null, authHeaders, o
       }
 
       const res = await fetch(
-        question ? `/api/questions/${question.id}` : `/api/quizzes/${quizId}/questions`,
+        question ? `${API_URL}/api/questions/${question.id}` : `${API_URL}/api/quizzes/${quizId}/questions`,
         { method: question ? 'PUT' : 'POST', headers: authHeaders(), body: JSON.stringify(payload) }
       )
       if (!res.ok) throw new Error((await res.json()).error || 'Error guardando pregunta')
