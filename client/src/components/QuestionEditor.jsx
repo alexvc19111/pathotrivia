@@ -76,7 +76,7 @@ export default function QuestionEditor({ quizId, question = null, authHeaders, o
       match_group: opt.match_group ?? opt.matchGroup ?? 'A'
     }))
 
-    // 🚨 REPARACIÓN CLAVE: Si es type_answer y vino vacío de la DB, le aseguramos su nodo de texto vacío
+    // REPARACIÓN CLAVE: Si es type_answer y vino vacío de la DB, le aseguramos su nodo de texto vacío
     if (currentType === 'type_answer' && initialOptions.length === 0) {
       initialOptions = createDefaultOptions('type_answer')
     } else if (initialOptions.length === 0) {
@@ -160,7 +160,7 @@ export default function QuestionEditor({ quizId, question = null, authHeaders, o
           ? [
               {
                 ...(typeof currentOptions[0]?.id === 'number' && { id: currentOptions[0].id }),
-                option_text: currentOptions[0].text.trim(),
+                option_text: currentOptions[0]?.text.trim() || '',
                 is_correct: true,
                 position: 0,
                 match_group: 'A'
@@ -343,7 +343,7 @@ function DropPinEditor({ mediaUrl, data, onChange }) {
             </div>
             <div style={{ ...styles.pinBubble, left:`${data.x}%`, top:`${data.y}%` }} />
             <div style={{ ...styles.pinTolerance, left:`${data.x}%`, top:`${data.y}%` }} />
-          </</>
+          </>
         )}
         <p style={styles.pinImgBadge}>Haz clic para marcar el punto correcto</p>
       </div>
