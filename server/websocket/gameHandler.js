@@ -288,6 +288,10 @@ stats.correctMatches = colA.map(left => {
       const key = String(answer.answer_text).trim().toLowerCase()
       counts[key] = (counts[key] || 0) + 1
     }
+
+    const correctOption = game.currentQuestion.options?.find(o => o.is_correct || o.isCorrect)
+    const correctTextNorm = correctOption ? String(correctOption.option_text || correctOption.optionText).trim().toLowerCase() : null
+    
     stats.distribution = Object.entries(counts)
       .sort((a, b) => b[1] - a[1])  // ordenar por frecuencia
       .slice(0, 10)                   // máximo 10 respuestas distintas
@@ -295,8 +299,7 @@ stats.correctMatches = colA.map(left => {
         label,
         count,
         pct:       stats.totalAnswers ? Math.round((count / stats.totalAnswers) * 100) : 0,
-        isCorrect: false
-      }))
+        isCorrect: correctTextNorm ? (label.trim().toLowerCase() === correctTextNorm) : false      }))
 
   // Slider: mostrar valor correcto vs respuestas
   } else if (qType === 'slider') {
