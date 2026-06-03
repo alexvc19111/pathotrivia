@@ -20,7 +20,7 @@ export default function AdminGame() {
   const timerRef = useRef(null)
   const playerUrl = sessionPin ? `${window.location.origin}/?pin=${sessionPin}` : ''
 
-  // 1. ✨ REFERENCIA PARA RESPALDAR LA PREGUNTA CON SUS OPCIONES
+  // ✨ REFERENCIA PARA RESPALDAR LA PREGUNTA CON SUS OPCIONES DURANTE LA FASE 'QUESTION'
   const savedQuestionRef = useRef(null)
 
   const wsUrl = sessionId
@@ -47,13 +47,9 @@ export default function AdminGame() {
   }, [sessionId]) // eslint-disable-line
 
   useEffect(() => {
-    console.log("Fase actual:", phase);
-    console.log("¿Qué hay en currentQ?", currentQ);
+    // ✨ CAPTURAMOS LAS OPCIONES EN CALIENTE MIENTRAS ESTÉN DISPONIBLES EN EL WebSocket
     if (currentQ?.question?.options) {
-      console.log("¡Opciones detectadas y guardadas!", currentQ.question.options);
       savedQuestionRef.current = currentQ.question
-    } else {
-      console.warn("⚠️ Advertencia: currentQ no contiene opciones en este punto.");
     }
 
     if (phase==='question' && currentQ) {
@@ -167,9 +163,9 @@ export default function AdminGame() {
   if (phase==='results' && qStats) {
     const sortedPlayers = [...players].sort((a,b)=>b.score-a.score).slice(0,5)
     
-    // 3. ✨ RESOLVEMOS LA PREGUNTA USANDO NUESTRA COPIA RESPALDADA EN LA REFERENCIA SI ES NECESARIO
+    // ✨ RECUPERACIÓN INTELIGENTE DE LA PREGUNTA ACTIVA
     const activeQuestion = currentQ?.question ?? savedQuestionRef.current
-    const qType = activeQuestion?.type
+    const qType = activeQuestion?.type?.toLowerCase()
     const qOptions = activeQuestion?.options
 
     return (
@@ -195,7 +191,7 @@ export default function AdminGame() {
                 .map((opt, idx) => (
                   <div key={opt.id} style={{ background:'var(--surface)', padding:'0.75rem 1rem', borderRadius:'10px', display:'flex', alignItems:'center', gap:'0.75rem', border:'1px solid var(--border)' }}>
                     <span style={{ fontFamily:'Syne, sans-serif', fontWeight:800, color:'var(--accent2)', minWidth:'24px' }}>{idx + 1}.</span>
-                    <span style={{ color:'var(--text)', fontSize:'0.95rem', fontWeight:500 }}>{opt.optionText ?? opt.option_text}</span>
+                    <span style={{ color:'var(--text)', fontSize:'0.95rem', fontWeight:500 }}>{opt.optionText ?? opt.option_text ?? opt.text}</span>
                     <span style={{ marginLeft:'auto', color:'var(--green)' }}>✓</span>
                   </div>
                 ))}
@@ -205,8 +201,9 @@ export default function AdminGame() {
 
         {/* CASO B: MATCHING (EMPAREJAMIENTO) */}
         {qType === 'matching' && qOptions && (() => {
-          const colA = qOptions.filter(o => (o.match_group ?? o.matchGroup) === 'A')
-          const colB = qOptions.filter(o => (o.match_group ?? o.matchGroup) === 'B')
+          // Filtrado robusto tolerando múltiples estructuras de datos de columnas
+          const colA = qOptions.filter(o => (o.match_group ?? o.matchGroup ?? o.match_back) === 'A')
+          const colB = qOptions.filter(o => (o.match_group ?? o.matchGroup ?? o.match_back) === 'B')
 
           return (
             <div className="glass animate-fadeIn" style={{ borderRadius:'16px', padding:'1.5rem', width:'100%', maxWidth:'650px', border:'1px solid var(--green)' }}>
@@ -215,18 +212,25 @@ export default function AdminGame() {
               </p>
               <div style={{ display:'flex', flexDirection:'column', gap:'0.6rem' }}>
                 {colA.map((itemA) => {
-                  const itemB = colB.find(b => 
-                    (b.match_id && b.match_id === itemA.match_id) || 
-                    (b.pair_id && b.pair_id === itemA.pair_id) || 
-                    (b.order === itemA.order) ||
-                    (b.correctOrder === itemA.correctOrder) ||
-                    (b.position !== undefined && Number(b.position) === Number(itemA.position))
-                  )
+                  // Buscador estricto que enlaza por IDs relacionales o por índices de posición en espejo
+                  const itemB = colB.find(b => {
+                    if (itemA.match_id && b.match_id === itemA.match_id) return true;
+                    if (itemA.matchId && b.matchId === itemA.matchId) return true;
+                    if (itemA.pair_id && b.pair_id === itemA.pair_id) return true;
+                    if (itemA.pairId && b.pairId === itemA.pairId) return true;
+
+                    const posA = itemA.position ?? itemA.order ?? itemA.correctOrder;
+                    const posB = b.position ?? b.order ?? b.correctOrder;
+                    if (posA !== undefined && posB !== undefined && Number(posA) === Number(posB)) return true;
+
+                    return false;
+                  })
+
                   return (
                     <div key={itemA.id} style={{ display:'grid', gridTemplateColumns:'1fr auto 1fr', alignItems:'center', gap:'1rem', background:'var(--surface)', padding:'0.75rem 1rem', borderRadius:'10px', border:'1px solid var(--border)' }}>
-                      <span style={{ color:'var(--text)', fontSize:'0.9rem', fontWeight:500, textAlign:'right' }}>{itemA.optionText ?? itemA.option_text}</span>
+                      <span style={{ color:'var(--text)', fontSize:'0.9rem', fontWeight:500, textAlign:'right' }}>{itemA.optionText ?? itemA.option_text ?? itemA.text}</span>
                       <span style={{ color:'var(--green)', fontSize:'1.1rem', fontWeight:700 }}>⇄</span>
-                      <span style={{ color:'var(--text2)', fontSize:'0.9rem', fontWeight:500 }}>{itemB ? (itemB.optionText ?? itemB.option_text) : '⚠️ Sin par asignado'}</span>
+                      <span style={{ color:'var(--text2)', fontSize:'0.9rem', fontWeight:500 }}>{itemB ? (itemB.optionText ?? itemB.option_text ?? itemB.text) : '⚠️ Sin par asignado'}</span>
                     </div>
                   )
                 })}
@@ -242,12 +246,16 @@ export default function AdminGame() {
               ✏️ RESPUESTAS VALIDADAS COMO CORRECTAS
             </p>
             <div style={{ display:'flex', flexWrap:'wrap', gap:'0.5rem' }}>
-              {qOptions.map((opt) => (
-                <div key={opt.id} style={{ background:'rgba(16,185,129,0.1)', border:'1px solid var(--green)', padding:'0.5rem 1rem', borderRadius:'20px', display:'flex', alignItems:'center', gap:'0.5rem' }}>
-                  <span style={{ color:'var(--text)', fontSize:'0.9rem', fontWeight:600 }}>"{opt.optionText ?? opt.option_text}"</span>
-                  <span style={{ color:'var(--green)', fontSize:'0.8rem' }}>✓</span>
-                </div>
-              ))}
+              {qOptions.map((opt) => {
+                const displayText = opt.optionText ?? opt.option_text ?? opt.text ?? opt.accepted_text ?? opt.value;
+                if (!displayText) return null;
+                return (
+                  <div key={opt.id} style={{ background:'rgba(16,185,129,0.1)', border:'1px solid var(--green)', padding:'0.5rem 1rem', borderRadius:'20px', display:'flex', alignItems:'center', gap:'0.5rem' }}>
+                    <span style={{ color:'var(--text)', fontSize:'0.9rem', fontWeight:600 }}>"{displayText}"</span>
+                    <span style={{ color:'var(--green)', fontSize:'0.8rem' }}>✓</span>
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}
@@ -290,7 +298,7 @@ export default function AdminGame() {
             )
           }
 
-          // 4. ✨ EVITAR GRÁFICAS DE BARRAS REDUNDANTES EN EMPAREJAMIENTOS/PUZZLES
+          // Escondemos gráficas redundantes para no solapar los paneles estilizados superiores
           if (['puzzle', 'matching'].includes(qType)) return null
 
           return (
