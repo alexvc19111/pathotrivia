@@ -105,6 +105,8 @@ export default function QuestionEditor({ quizId, question = null, authHeaders, o
       toast.error('Debes añadir al menos una opción válida')
       return
     }
+    // type_answer siempre envía sus opciones aunque no esté en needsOptions
+    const typeAnswerOptions = type === 'type_answer' ? validOptions : []
 
     setLoading(true)
     try {
@@ -124,19 +126,19 @@ export default function QuestionEditor({ quizId, question = null, authHeaders, o
           pin_x: pinX !== '' ? Number(pinX) : null,
           pin_y: pinY !== '' ? Number(pinY) : null
         }),
-        question_options: needsOptions
-          ? validOptions.map((o, idx) => ({
+        question_options: (needsOptions || type === 'type_answer')
+          ? (needsOptions ? validOptions : typeAnswerOptions).map((o, idx) => ({
               option_text: o.text.trim(),
-              is_correct:  !!o.is_correct,
-              // Para matching usar el position real (define el par). Para otros tipos usar idx
+              is_correct:  type === 'type_answer' ? true : !!o.is_correct,
               position:    type === 'matching' ? (o.position ?? idx) : idx,
               match_group: type === 'matching' ? (o.match_group || 'A') : null
             }))
           : []
       }
 
+      const base = API_URL || ''
       const res = await fetch(
-        question ? `${API_URL}/api/questions/${question.id}` : `${API_URL}/api/quizzes/${quizId}/questions`,
+        question ? `${base}/api/questions/${question.id}` : `${base}/api/quizzes/${quizId}/questions`,
         { method: question ? 'PUT' : 'POST', headers: authHeaders(), body: JSON.stringify(payload) }
       )
       if (!res.ok) throw new Error((await res.json()).error || 'Error guardando pregunta')
