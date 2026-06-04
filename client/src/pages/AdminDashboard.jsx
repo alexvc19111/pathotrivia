@@ -29,7 +29,7 @@ export default function AdminDashboard() {
   const [activeQuiz, setActiveQuiz]     = useState(null)
   const [questions, setQuestions]       = useState([])
   const [loading, setLoading]           = useState(false)
-  const [view, setView]                 = useState(\'list\')
+  const [view, setView]                 = useState(\"list")
   const [editingQ, setEditingQ]         = useState(null)
   const [editorKey, setEditorKey]       = useState(0)   // fuerza remonte al crear nueva pregunta
   const [showNewQuiz, setShowNewQuiz]   = useState(false)
