@@ -270,10 +270,13 @@ export default function AdminDashboard() {
                       Eliminar
                     </button>
                         
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             </div>
-                    )
-            })}
+          )}
         </main>
       </div>
     </div>
