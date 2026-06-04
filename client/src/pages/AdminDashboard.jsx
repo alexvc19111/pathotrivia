@@ -21,16 +21,16 @@ import {
 } from 'lucide-react'
 
 const QUESTION_TYPES = [
-  { id: 'multiple_choice', icon: HelpCircle, label: 'Opción múltiple' },
-  { id: 'true_false', icon: CheckCircle2, label: 'Verdadero / Falso' },
-  { id: 'type_answer', icon: Keyboard, label: 'Escribir respuesta' },
-  { id: 'puzzle', icon: Puzzle, label: 'Puzzle (ordenar)' },
-  { id: 'poll', icon: BarChart3, label: 'Encuesta' },
-  { id: 'word_cloud', icon: Cloud, label: 'Nube de palabras' },
-  { id: 'slider', icon: SlidersHorizontal, label: 'Deslizador numérico' },
-  { id: 'brainstorm', icon: Lightbulb, label: 'Brainstorm' },
-  { id: 'drop_pin', icon: MapPin, label: 'Señalar en imagen' },
-  { id: 'matching', icon: GitCompare, label: 'Emparejar' }
+  { id: 'multiple_choice', icon: HelpCircle, label: 'Opción múltiple', color: '#3b82f6' },
+  { id: 'true_false', icon: CheckCircle2, label: 'Verdadero / Falso', color: '#22c55e' },
+  { id: 'type_answer', icon: Keyboard, label: 'Escribir respuesta', color: '#f59e0b' },
+  { id: 'puzzle', icon: Puzzle, label: 'Puzzle (ordenar)', color: '#a855f7' },
+  { id: 'poll', icon: BarChart3, label: 'Encuesta', color: '#06b6d4' },
+  { id: 'word_cloud', icon: Cloud, label: 'Nube de palabras', color: '#60a5fa' },
+  { id: 'slider', icon: SlidersHorizontal, label: 'Deslizador numérico', color: '#ec4899' },
+  { id: 'brainstorm', icon: Lightbulb, label: 'Brainstorm', color: '#eab308' },
+  { id: 'drop_pin', icon: MapPin, label: 'Señalar en imagen', color: '#ef4444' },
+  { id: 'matching', icon: GitCompare, label: 'Emparejar', color: '#14b8a6' }
 ]
 
 export default function AdminDashboard() {
@@ -245,7 +245,7 @@ export default function AdminDashboard() {
                 const Icon = typeInfo?.icon
                   return (
                     <div key={q.id} className="animate-slideIn" style={{ animationDelay:`${i*0.04}s`, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'14px', padding:'1rem 1.25rem', display:'flex', alignItems:'center', gap:'1rem' }}>
-                      <div style={{ width:'36px', height:'36px', borderRadius:'10px', background:'var(--surface2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1.1rem', flexShrink:0 }}>{Icon ? (<Icon size={18} strokeWidth={2} />) : (<HelpCircle size={18} strokeWidth={2} />)}</div>
+                      <div style={{ width:'36px', height:'36px', borderRadius:'10px', background:'var(--surface2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1.1rem', flexShrink:0 }}>{Icon ? (<Icon size={18} strokeWidth={2} color={typeInfo?.color || '#888'} />) : (<HelpCircle size={18} strokeWidth={2} color="#888" />)}</div>
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', marginBottom:'0.2rem' }}>
                           <span style={{ fontSize:'0.75rem', color:'var(--text3)', fontWeight:500 }}>#{i+1}</span>
