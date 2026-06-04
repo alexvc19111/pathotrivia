@@ -1,20 +1,20 @@
 import { useState, useEffect, useRef } from 'react'
-import { X } from 'lucide-react'
+import { X, HelpCircle, CheckCircle2, Keyboard, Puzzle, BarChart3, Cloud, SlidersHorizontal, Lightbulb, MapPin, GitCompare, Loader2, Plus, Save } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { API_URL } from '../config'
 
-const QUESTION_TYPES = {
-  multiple_choice: 'Opción múltiple',
-  true_false:      'Verdadero / Falso',
-  type_answer:     'Escribir respuesta',
-  puzzle:          'Puzzle (ordenar)',
-  poll:            'Encuesta',
-  word_cloud:      'Nube de palabras',
-  slider:          'Deslizador numérico',
-  brainstorm:      'Brainstorm',
-  drop_pin:        'Señalar en imagen',
-  matching:        'Emparejar'
-}
+const QUESTION_TYPES = [
+  { id: 'multiple_choice', icon: HelpCircle,       label: 'Opción múltiple',      color: '#3b82f6' },
+  { id: 'true_false',      icon: CheckCircle2,     label: 'Verdadero / Falso',    color: '#22c55e' },
+  { id: 'type_answer',     icon: Keyboard,          label: 'Escribir respuesta',   color: '#f59e0b' },
+  { id: 'puzzle',          icon: Puzzle,            label: 'Puzzle (ordenar)',     color: '#a855f7' },
+  { id: 'poll',            icon: BarChart3,         label: 'Encuesta',             color: '#06b6d4' },
+  { id: 'word_cloud',      icon: Cloud,             label: 'Nube de palabras',     color: '#60a5fa' },
+  { id: 'slider',          icon: SlidersHorizontal, label: 'Deslizador numérico',  color: '#ec4899' },
+  { id: 'brainstorm',      icon: Lightbulb,         label: 'Brainstorm',           color: '#eab308' },
+  { id: 'drop_pin',        icon: MapPin,            label: 'Señalar en imagen',    color: '#ef4444' },
+  { id: 'matching',        icon: GitCompare,        label: 'Emparejar',            color: '#14b8a6' },
+]
 
 function defaultOptions(type) {
   if (type === 'true_false') return [
@@ -170,9 +170,22 @@ export default function QuestionEditor({ quizId, question = null, authHeaders, o
           {/* Tipo */}
           <div>
             <label style={labelStyle}>Tipo de pregunta</label>
-            <select value={type} onChange={e => setType(e.target.value)} className="input-field" style={{ fontSize:'0.9rem' }}>
-              {Object.entries(QUESTION_TYPES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-            </select>
+            {(() => {
+              const selected = QUESTION_TYPES.find(t => t.id === type)
+              const Icon = selected?.icon
+              return (
+                <div style={{ position:'relative' }}>
+                  {Icon && (
+                    <div style={{ position:'absolute', left:'0.875rem', top:'50%', transform:'translateY(-50%)', pointerEvents:'none', zIndex:1 }}>
+                      <Icon size={16} color={selected.color} strokeWidth={2} />
+                    </div>
+                  )}
+                  <select value={type} onChange={e => setType(e.target.value)} className="input-field" style={{ fontSize:'0.9rem', paddingLeft: Icon ? '2.25rem' : '1rem' }}>
+                    {QUESTION_TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                  </select>
+                </div>
+              )
+            })()}
           </div>
 
           {/* Texto */}
@@ -382,8 +395,13 @@ export default function QuestionEditor({ quizId, question = null, authHeaders, o
         {/* Footer */}
         <div style={{ display:'flex', gap:'0.75rem', marginTop:'1.75rem' }}>
           <button onClick={onCancel} className="btn-ghost" style={{ flex:1 }}>Cancelar</button>
-          <button onClick={handleSave} disabled={loading} className="btn-primary" style={{ flex:1 }}>
-            {loading ? '⏳ Guardando...' : question ? '✓ Actualizar' : '✓ Crear pregunta'}
+          <button onClick={handleSave} disabled={loading} className="btn-primary" style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:'0.5rem' }}>
+            {loading
+              ? <><Loader2 size={16} style={{ animation:'spin 1s linear infinite' }} /> Guardando...</>
+              : question
+                ? <><Save size={16} /> Actualizar</>
+                : <><Plus size={16} /> Crear pregunta</>
+            }
           </button>
         </div>
       </div>
